@@ -2,8 +2,13 @@
 
 #include <vector>
 #include <iostream>
+#include <algorithm>
+#include <iomanip>
 
 #include <boost/filesystem.hpp>
+
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
 
 #include "crde_exception.h"
 
@@ -24,5 +29,13 @@ namespace crde
     credits_tc find_credits_timecodes(
             const std::vector< boost::filesystem::path >& biff_folders);
 
+    std::vector< cv::Mat > load_biff_from_dir(
+            const boost::filesystem::path& biff_folder);
+
+    std::vector< uint64_t > pixel_sum_sequence(
+            const std::vector< cv::Mat > image_sequence);
+
     std::ostream& operator<<(std::ostream& os, const credits_tc& timecodes);
+    std::ostream& operator<<(std::ostream& os,
+            const std::vector< std::vector<uint64_t> >& pix_sum_seqs);
 }
