@@ -4,7 +4,8 @@ set(SRCS "src/main.cpp"
          "src/credits_detection.cpp"
          "src/crde_exception.cpp")
 set(HDRS "src/credits_detection.h"
-         "src/crde_exception.h")
+         "src/crde_exception.h"
+         "src/crde_utils.h")
 
 #Link OpenCV lib
 find_package(OpenCV)

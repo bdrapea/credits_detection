@@ -6,10 +6,6 @@ namespace crde
             const std::vector< boost::filesystem::path >& biff_folders)
     {
         std::vector< boost::filesystem::path >::size_type path_count = biff_folders.size();
-        credits_tc timecodes;
-            timecodes.starts.assign(path_count,0);
-            timecodes.ends.assign(path_count,0);
-            timecodes.video_names.assign(path_count,"");
 
         std::vector< std::vector< cv::Mat > > sequences;
             sequences.reserve(path_count);
@@ -41,8 +37,30 @@ namespace crde
 
         for(std::vector<boost::filesystem::path>::size_type i=0; i<path_count; i++)
             pix_sum_sequences.emplace_back(pixel_sum_sequence(sequences[i]));
-
         std::cout << pix_sum_sequences << std::endl;
+
+        std::cout << "SUBSEQ" << std::endl;
+
+        /** Find the longest common sequence between two image sequence **/
+        std::vector< std::vector<uint64_t> > lcs =
+                utils::longest_common_subseq(pix_sum_sequences[0],
+                                             pix_sum_sequences[1],
+                                             static_cast<uint64_t>(200));
+
+        std::cout << lcs << std::endl;
+
+        /** Finding the starting frame of credits **/
+        credits_tc timecodes;
+        for(size_t k=0; k<2; k++)
+        {
+            auto it =
+            std::find(pix_sum_sequences[k].begin(), pix_sum_sequences[k].end(), lcs[k][0]);
+            int start_tc = static_cast<int>(std::distance(pix_sum_sequences[k].begin(), it));
+            int end_tc = static_cast<int>(lcs[k].size()-1);
+            timecodes.starts.push_back(start_tc);
+            timecodes.ends.push_back(end_tc);
+            timecodes.video_names.push_back(" ");
+        }
 
         return timecodes;
     }
@@ -164,7 +182,7 @@ namespace crde
 
         for(std::vector<uint64_t>::size_type i=0; i<min_size; i++)
         {
-            os  << i << ": ";
+            os << i << ": ";
 
             for(const std::vector<uint64_t>& seq : pix_sum_seqs)
                 os << std::setw(10) << seq[i] << ' ';

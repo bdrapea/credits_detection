@@ -4,6 +4,7 @@
 #include <iostream>
 #include <algorithm>
 #include <iomanip>
+#include <iterator>
 
 #include <boost/filesystem.hpp>
 
@@ -11,6 +12,7 @@
 #include <opencv2/highgui.hpp>
 
 #include "crde_exception.h"
+#include "crde_utils.h"
 
 namespace crde
 {
