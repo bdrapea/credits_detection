@@ -5,10 +5,16 @@ namespace crde
     credits_tc find_credits_timecodes(
             const std::vector< boost::filesystem::path >& biff_folders)
     {
-        std::vector< boost::filesystem::path >::size_type path_count = biff_folders.size();
-
+        /** INITIALISATION **/
+        /**
+         * In this part we just load the folder's biffs in RAM for the
+         * further computations
+         */
+        std::size_t path_count = biff_folders.size();
         std::vector< std::vector< cv::Mat > > sequences;
             sequences.reserve(path_count);
+        std::vector< std::string > video_names;
+            video_names.reserve(path_count);
 
         for(const boost::filesystem::path& path : biff_folders)
         {
@@ -17,7 +23,8 @@ namespace crde
             if(!boost::filesystem::is_directory(path))
                 throw exception("Path not valid:",
                                 "crde::find_credits_timecodes",
-                                "Path doesn't lead to a directory:" + path.string());
+                                "Path doesn't lead to a directory:"
+                                + path.string());
 
             /** Check if the path exist **/
             if(!boost::filesystem::exists(path))
@@ -28,38 +35,63 @@ namespace crde
             /** Getting the data **/
             /** Load images in vector**/
             sequences.emplace_back(load_biff_from_dir(path));
+            video_names.emplace_back(path.stem().string());
         }
 
-        /** Now we have to get one number sequences from image, for easy and
-         * more understandable comparison process. **/
-        std::vector< std::vector<uint64_t> > pix_sum_sequences;
-        pix_sum_sequences.reserve(path_count);
+        /** COMPUTATION **/
+        /**
+         * Here is the main algorithm: We compute over all videos a vector
+         * containing some specified metrics (ex: Pix sum, mean and variance...)
+         * Then we compare two sequences and find a common subsequence with
+         * a threshold (We need a threshold because the credits can vary and may
+         * have different compression artefacts).
+         * Finaly, we find the sequence with the same threshold in all the video
+         */
 
-        for(std::vector<boost::filesystem::path>::size_type i=0; i<path_count; i++)
-            pix_sum_sequences.emplace_back(pixel_sum_sequence(sequences[i]));
-        std::cout << pix_sum_sequences << std::endl;
+        /** Computation of the metrics **/
+        std::vector< std::vector<uint64_t> > pxsums;
+        pxsums.reserve(path_count);
 
-        std::cout << "SUBSEQ" << std::endl;
+        for(const std::vector< cv::Mat >& sequence : sequences )
+            pxsums.emplace_back(pixel_sum_sequence(sequence));
 
-        /** Find the longest common sequence between two image sequence **/
-        std::vector< std::vector<uint64_t> > lcs =
-                utils::longest_common_subseq(pix_sum_sequences[0],
-                                             pix_sum_sequences[1],
-                                             static_cast<uint64_t>(200));
+        /** Comparison of two sequences **/
+        const uint64_t threshold = 5000;
+        std::vector<uint64_t> lcs = utils::longest_common_subseq(pxsums[0],
+                                                                 pxsums[1],
+                                                                 threshold);
 
-        std::cout << lcs << std::endl;
-
-        /** Finding the starting frame of credits **/
+        const std::size_t credits_min_duration = 2;
         credits_tc timecodes;
-        for(size_t k=0; k<2; k++)
+        if(lcs.size() >= credits_min_duration)
         {
-            auto it =
-            std::find(pix_sum_sequences[k].begin(), pix_sum_sequences[k].end(), lcs[k][0]);
-            int start_tc = static_cast<int>(std::distance(pix_sum_sequences[k].begin(), it));
-            int end_tc = static_cast<int>(lcs[k].size()-1);
-            timecodes.starts.push_back(start_tc);
-            timecodes.ends.push_back(end_tc);
-            timecodes.video_names.push_back(" ");
+            pxsums.push_back(lcs);
+            std::cout << pxsums << std::endl;
+
+            /** Find the timecodes for the first two video **/
+            int credits_size = static_cast<int>(lcs.size());
+            for(std::size_t i=0; i<path_count; i++)
+            {
+                std::size_t index = utils::search_thresholded(
+                                                        pxsums[i],lcs,threshold);
+
+                if(index != pxsums.size())
+                {
+                    int start = static_cast<int>(index);
+                    timecodes.starts.push_back(start);
+                    timecodes.ends.push_back(start + credits_size-1);
+                }
+                else
+                {
+                    timecodes.starts.push_back(0);
+                    timecodes.ends.push_back(0);
+                }
+                timecodes.video_names.push_back(video_names[i]);
+            }
+        }
+        else
+        {
+            std::cerr << "Can't find the credits !" << std::endl;
         }
 
         return timecodes;
@@ -78,8 +110,8 @@ namespace crde
 
         /** Determining number of zeros of the sequence **/
         std::string ref_name = dir_it->path().stem().string();
-        std::string::size_type ref_size = ref_name.size();
-        std::string::size_type ref_ind = ref_size-1;
+        std::size_t ref_size = ref_name.size();
+        std::size_t ref_ind = ref_size-1;
         while(ref_name[ref_ind] >= '0' && ref_name[ref_ind] <= '9')
         {
             if(ref_ind == 0)
@@ -93,7 +125,7 @@ namespace crde
                             "load_biff_from_dir",
                             "No number sequence detected");
 
-        std::string::size_type number_zeros = (ref_size-1)-ref_ind;
+        std::size_t number_zeros = (ref_size-1)-ref_ind;
 
         /** Getting all the paths **/
         for(; dir_it != end_it; dir_it.increment(error_code))
@@ -111,12 +143,12 @@ namespace crde
         }
 
         /** Sort the path as sequence **/
-        std::vector<int>::size_type seq_size = image_nums.size();
+        std::size_t seq_size = image_nums.size();
         std::vector<boost::filesystem::path> sorted_paths(seq_size);
-        for(std::vector<int>::size_type i=0; i<seq_size; i++)
+        for(std::size_t i=0; i<seq_size; i++)
         {
-            std::vector<boost::filesystem::path>::size_type ind =
-                    static_cast<std::vector<boost::filesystem::path>::size_type>(image_nums[i])-1;
+            std::size_t ind =
+                    static_cast<std::size_t>(image_nums[i])-1;
             sorted_paths[ind] = paths[i];
         }
 
@@ -145,10 +177,12 @@ namespace crde
             {
                 for(int x = 0; x < image.rows; x++)
                 {
-                    sum += static_cast<uint64_t>(
-                                *image.ptr(x,y));
+                    sum += static_cast<uint64_t>( *image.ptr(x,y)
+                                               + *(image.ptr(x,y)+1)
+                                               + *(image.ptr(x,y)+2));
                 }
             }
+
             pixel_sums.emplace_back(sum);
         }
 
@@ -157,37 +191,14 @@ namespace crde
 
     std::ostream& operator<<(std::ostream& os, const credits_tc& timecodes)
     {
-        std::vector<int>::size_type count = timecodes.starts.size();
+        std::size_t count = timecodes.starts.size();
         const int* start_data = timecodes.starts.data();
         const int* end_data = timecodes.ends.data();
 
-        for(std::vector<int>::size_type i=0; i<count; i++)
+        for(std::size_t i=0; i<count; i++)
         {
             os << "Video: " << timecodes.video_names[i] << '\n'
                << start_data[i] << " --> " << end_data[i] << "\n\n";
-        }
-
-        return os;
-    }
-
-    std::ostream& operator<<(std::ostream& os,
-                const std::vector< std::vector<uint64_t> >& pix_sum_seqs)
-    {
-        std::vector<std::vector<uint64_t>::size_type> seq_sizes;
-        for(const std::vector<uint64_t>& seq : pix_sum_seqs)
-            seq_sizes.push_back(seq.size());
-
-        std::vector<uint64_t>::size_type min_size =
-                *std::min_element(seq_sizes.begin(), seq_sizes.end());
-
-        for(std::vector<uint64_t>::size_type i=0; i<min_size; i++)
-        {
-            os << i << ": ";
-
-            for(const std::vector<uint64_t>& seq : pix_sum_seqs)
-                os << std::setw(10) << seq[i] << ' ';
-
-            os << '\n';
         }
 
         return os;

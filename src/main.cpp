@@ -5,7 +5,7 @@ int main(int argc, char** argv)
     /** Loads the inputs from the console in a path vector **/
     std::vector< boost::filesystem::path > biff_directories;
         biff_directories.reserve(
-        static_cast<std::vector< boost::filesystem::path >::size_type> (argc-1));
+        static_cast<std::size_t> (argc-1));
 
     if(argc <= 2)
     {
@@ -28,8 +28,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
-
-    /** Print the timecodes **/
+    /** Prints the timecodes **/
     std::cout << timecodes << std::endl;
 
     return 0;
