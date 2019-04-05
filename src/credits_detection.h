@@ -8,16 +8,23 @@
 
 #include <boost/filesystem.hpp>
 
-#include <opencv2/core.hpp>
-#include <opencv2/highgui.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 #include "crde_exception.h"
 #include "crde_utils.h"
 
 namespace crde
 {
+    /**
+     * @brief The credits_tc struct
+     * It is a default structure to represent a classic timecode
+     */
     struct credits_tc
     {
+        /** Frame per seconds **/
+        int fps;
+
         /**< Numbers of the first image of the credits **/
         std::vector<int> starts;
 

@@ -7,6 +7,9 @@ set(HDRS "src/credits_detection.h"
          "src/crde_exception.h"
          "src/crde_utils.h")
 
+#set the c++ version to c++14
+set(CMAKE_CXX_STANDARD 14)
+
 #Link OpenCV lib
 find_package(OpenCV)
 if(NOT OpenCV_FOUND)
@@ -15,7 +18,7 @@ endif()
 
 #link boost lib
 find_package(Boost)
-if(NOT OpenCV_FOUND)
+if(NOT Boost_FOUND)
     message(FATAL_ERROR "Boost required: Please install the library")
 endif()
 
