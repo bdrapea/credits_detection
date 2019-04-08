@@ -17,7 +17,7 @@ int main(int argc, char** argv)
         biff_directories.emplace_back(argv[i]);
 
     /** Main process **/
-    crde::credits_tc timecodes;
+    crde::utils::credits_tc timecodes;
     try
     {
         timecodes = crde::find_credits_timecodes(biff_directories);

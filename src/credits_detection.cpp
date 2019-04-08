@@ -2,7 +2,7 @@
 
 namespace crde
 {
-    credits_tc find_credits_timecodes(
+    utils::credits_tc find_credits_timecodes(
             const std::vector< boost::filesystem::path >& biff_folders)
     {
         /** INITIALISATION **/
@@ -49,33 +49,30 @@ namespace crde
          */
 
         /** Computation of the metrics **/
-        std::vector< std::vector<uint64_t> > pxsums;
-        pxsums.reserve(path_count);
+        std::vector< std::vector<utils::pic_stats> > pxstats;
 
         for(const std::vector< cv::Mat >& sequence : sequences )
-            pxsums.emplace_back(pixel_sum_sequence(sequence));
+            pxstats.emplace_back(generate_pic_stats(sequence));
+
+        std::vector<utils::pic_stats> stats = generate_pic_stats(sequences[0]);
 
         /** Comparison of two sequences **/
-        const uint64_t threshold = 5000;
-        std::vector<uint64_t> lcs = utils::longest_common_subseq(pxsums[0],
-                                                                 pxsums[1],
-                                                                 threshold);
+        const utils::pic_stats threshold(10,10);
+        std::vector<utils::pic_stats> lcs =
+                utils::longest_common_subseq(pxstats[0],pxstats[1],threshold);
 
         const std::size_t credits_min_duration = 2;
-        credits_tc timecodes;
+        utils::credits_tc timecodes;
         if(lcs.size() >= credits_min_duration)
         {
-            pxsums.push_back(lcs);
-            std::cout << pxsums << std::endl;
-
             /** Find the timecodes for the first two video **/
             int credits_size = static_cast<int>(lcs.size());
             for(std::size_t i=0; i<path_count; i++)
             {
-                std::size_t index = utils::search_thresholded(
-                                                        pxsums[i],lcs,threshold);
+                std::size_t index =
+                        utils::search_thresholded(pxstats[i], lcs,threshold);
 
-                if(index != pxsums.size())
+                if(index != pxstats.size())
                 {
                     int start = static_cast<int>(index);
                     timecodes.starts.push_back(start);
@@ -139,7 +136,10 @@ namespace crde
             paths.push_back(dir_it->path());
 
             /** We extract the number of the image's path **/
-            image_nums.push_back(std::stoi(file_name.substr(file_name.size()-number_zeros,number_zeros)));
+            image_nums.push_back(
+                        std::stoi(
+                            file_name.substr(
+                                file_name.size()-number_zeros,number_zeros)));
         }
 
         /** Sort the path as sequence **/
@@ -189,18 +189,27 @@ namespace crde
         return pixel_sums;
     }
 
-    std::ostream& operator<<(std::ostream& os, const credits_tc& timecodes)
+    std::vector<utils::pic_stats> generate_pic_stats(
+            const std::vector< cv::Mat > image_sequence)
     {
-        std::size_t count = timecodes.starts.size();
-        const int* start_data = timecodes.starts.data();
-        const int* end_data = timecodes.ends.data();
+        std::vector<utils::pic_stats> pixstats;
+        pixstats.reserve(image_sequence.size());
 
-        for(std::size_t i=0; i<count; i++)
+        auto arithmetic_mean = [](const cv::Mat& matr)->double
         {
-            os << "Video: " << timecodes.video_names[i] << '\n'
-               << start_data[i] << " --> " << end_data[i] << "\n\n";
+            return ( matr.at<double>(0,0)
+                    +matr.at<double>(1,0)
+                    +matr.at<double>(2,0))/3;
+        };
+
+        for(const cv::Mat& image : image_sequence)
+        {
+            cv::Mat means, stddeviation;
+            cv::meanStdDev(image, means, stddeviation);
+            pixstats.emplace_back(
+                        arithmetic_mean(means), arithmetic_mean(stddeviation));
         }
 
-        return os;
+        return pixstats;
     }
 }

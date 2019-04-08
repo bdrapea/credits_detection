@@ -17,25 +17,6 @@
 namespace crde
 {
     /**
-     * @brief The credits_tc struct
-     * It is a default structure to represent a classic timecode
-     */
-    struct credits_tc
-    {
-        /** Frame per seconds **/
-        int fps;
-
-        /**< Numbers of the first image of the credits **/
-        std::vector<int> starts;
-
-        /**< Numbers of the last image of the credits **/
-        std::vector<int> ends;
-
-        /** Name of the videos **/
-        std::vector<std::string> video_names;
-    };
-
-    /**
      * @brief find_credits_timecodes
      * Main algorithm, it returns the timecodes of the credits for each videos
      * @param biff_folders
@@ -43,7 +24,7 @@ namespace crde
      * @return
      * Timecodes for each video credits (beginning and ending)
      */
-    credits_tc find_credits_timecodes(
+    utils::credits_tc find_credits_timecodes(
             const std::vector< boost::filesystem::path >& biff_folders);
 
     /**
@@ -69,17 +50,8 @@ namespace crde
     std::vector< uint64_t > pixel_sum_sequence(
             const std::vector< cv::Mat > image_sequence);
 
-    /**
-     * @brief operator <<
-     * Print credits_tc properly
-     * @param os
-     * Buffer for printing purpose
-     * @param timecodes
-     * Object to print
-     * @return
-     * Buffer modified
-     */
-    std::ostream& operator<<(std::ostream& os, const credits_tc& timecodes);
+    std::vector<utils::pic_stats> generate_pic_stats(
+            const std::vector< cv::Mat > image_sequence);
 
     /**
      * @brief operator <<

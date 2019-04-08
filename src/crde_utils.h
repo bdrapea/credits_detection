@@ -13,6 +13,37 @@ namespace crde
     namespace utils
     {
         /**
+         * @brief The credits_tc struct
+         * It is a default structure to represent a classic timecode
+         */
+        struct credits_tc
+        {
+            /** Frame per seconds **/
+            int fps;
+
+            /**< Numbers of the first image of the credits **/
+            std::vector<int> starts;
+
+            /**< Numbers of the last image of the credits **/
+            std::vector<int> ends;
+
+            /** Name of the videos **/
+            std::vector<std::string> video_names;
+        };
+
+        /**
+         * @brief The pics_stats struct contains all data for BW picture
+         */
+        struct pic_stats
+        {
+            double mean;
+            double mean_standard_deviation;
+
+            pic_stats(double mn, double stdd):
+                mean(mn), mean_standard_deviation(stdd){}
+        };
+
+        /**
          * @brief longest_common_subseq
          * Simple algorithm to find the longest commmon subsequence between two
          * series, but you can notify a threshold
@@ -25,59 +56,10 @@ namespace crde
          * @return
          * Common subsequence between the two sequences
          */
-        template<typename T>
-        std::vector<T> longest_common_subseq(const std::vector<T>& seq1,
-                                             const std::vector<T>& seq2,
-                                             const T threshold)
-        {
-            if(threshold*2 >= std::min(*std::max_element(seq1.begin(),seq1.end()),
-                                *std::max_element(seq2.begin(),seq2.end())))
-                throw exception("Wrong threshold",
-                                "utils::longest_common_seq",
-                                "The threshold is too high");
-
-            std::size_t seq1_size = seq1.size();
-            std::size_t seq2_size = seq2.size();
-            const T* seq1_data = seq1.data();
-            const T* seq2_data = seq2.data();
-            std::size_t ind = seq1_size;
-            std::size_t count = 0;
-
-            std::size_t lcs_ind = 0;
-            std::size_t lcs_size = 0;
-
-            for(std::size_t i = 0; i < seq1_size; i++)
-            {
-                for(std::size_t j = 0; j < seq2_size; j++)
-                {
-                    if(seq1_data[i] <= seq2_data[j] + threshold
-                            && seq1_data[i] >= seq2_data[j] - threshold)
-                    {
-                        if(ind == seq1_size)
-                            ind = i;
-
-                        count++;
-                        i++;
-
-                        if(i >= seq1_size)
-                            break;
-                    }
-                    else
-                    {
-                        if(count > lcs_size)
-                        {
-                            lcs_ind = ind;
-                            lcs_size = count;
-                        }
-
-                        ind = seq1_size;
-                        count = 0;
-                    }
-                }
-            }
-
-            return std::vector<T>(seq1.begin()+lcs_ind, seq1.begin()+lcs_ind+lcs_size);
-        }
+        std::vector<pic_stats> longest_common_subseq(
+                const std::vector<pic_stats>& seq1,
+                const std::vector<pic_stats>& seq2,
+                const pic_stats threshold);
 
         /**
          * @brief search_thresholded
@@ -92,45 +74,32 @@ namespace crde
          * Index to the first value of the found subsequence, if not it return
          * the size of seq
          */
-        template<typename T>
-        std::size_t search_thresholded(const std::vector<T>& seq,
-                                       const std::vector<T>& subseq,
-                                       const T threshold)
+        std::size_t search_thresholded(const std::vector<pic_stats>& seq,
+                                       const std::vector<pic_stats>& subseq,
+                                       const pic_stats threshold);
+
+        template <typename T>
+        inline bool more_less(const T v1, const T v2, const T threshold)
         {
-            std::size_t subseq_size = subseq.size();
-            std::size_t seq_size = seq.size();
-            const T* subseq_dat = subseq.data();
-            const T* seq_dat = seq.data();
+            if((v1 <= v2 + threshold)
+                    && (v1 >= v2 - threshold))
 
-            if(threshold*2 >= *std::max_element(seq.begin(), seq.end()))
-                throw exception("Wrong threshold",
-                                "utils::search_thresholded",
-                                "The threshold is too high");
+                return true;
 
-            if(subseq_size > seq_size)
-                throw exception("Wrong parameter order",
-                                "utils::search_tresholded",
-                                "Size of the subsequence must be less than"
-                                "the size of the main sequence");
-
-            std::size_t ind = 0;
-            for(std::size_t i=0; i<seq_size; i++)
-            {
-                if(seq_dat[i] <= subseq_dat[ind]+threshold
-                        && seq_dat[i] >= subseq_dat[ind]-threshold)
-                {
-                    ind++;
-
-                    if(ind == subseq_size)
-                        return i-ind+1;
-                }
-                else
-                {
-                    ind = 0;
-                }
-            }
-
-            return seq_size;
+            return false;
         }
+
+        /**
+         * @brief operator <<
+         * Print credits_tc properly
+         * @param os
+         * Buffer for printing purpose
+         * @param timecodes
+         * Object to print
+         * @return
+         * Buffer modified
+         */
+        std::ostream& operator<<(std::ostream& os,
+                                 const utils::credits_tc& timecodes);
     }
 }
