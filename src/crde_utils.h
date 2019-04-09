@@ -31,61 +31,80 @@ namespace crde
             std::vector<std::string> video_names;
         };
 
-        /**
-         * @brief The pics_stats struct contains all data for BW picture
-         */
-        struct pic_stats
-        {
-            std::array<double, 3> mean = {0};
-
-            pic_stats(std::array<double, 3> mn):
-                mean(mn){}
-        };
-
-        /**
-         * @brief longest_common_subseq
-         * Simple algorithm to find the longest commmon subsequence between two
-         * series, but you can notify a threshold
-         * @param subseq1
-         * Sequence 1 of oject you want to compare
-         * @param subseq2
-         * Sequence 2 of object you want to compare
-         * @param threshold
-         * Threshold for looking similare subseqence
-         * @return
-         * Common subsequence between the two sequences
-         */
-        std::vector<pic_stats> longest_common_subseq(
-                const std::vector<pic_stats>& seq1,
-                const std::vector<pic_stats>& seq2,
-                const pic_stats threshold);
-
-        /**
-         * @brief search_thresholded
-         * Will search a sequence in a bigger one
-         * @param seq
-         * Sequence of data to look into
-         * @param subseq
-         * Sequence of data to find
-         * @param threshold
-         * Threshold value for approximating search
-         * @return
-         * Index to the first value of the found subsequence, if not it return
-         * the size of seq
-         */
-        std::size_t search_thresholded(const std::vector<pic_stats>& seq,
-                                       const std::vector<pic_stats>& subseq,
-                                       const pic_stats threshold);
-
         template <typename T>
+        /**
+         * @brief more_less
+         * Simple function for recreating a moreless operator with a threshold
+         * @param v1
+         * Value to compare number 1
+         * @param v2
+         * Value to com
+         * @param threshold
+         * @return
+         */
         inline bool more_less(const T v1, const T v2, const T threshold)
         {
-            if((v1 <= v2 + threshold) && (v1 >= v2 - threshold))
-            {
-                return true;
-            }
+            if((v1 <= v2 + threshold)
+                    && (v1 >= v2 - threshold))
+                return true;   
 
             return false;
+        }
+
+        template <typename T>
+        void exponential_smoothing(std::vector<T>* datas, const double alpha)
+        {
+            std::size_t data_size = datas->size();
+            T* data_data = datas->data();
+
+            T old_value = *datas->begin();
+
+            for(std::size_t i=0; i<data_size; i++)
+            {
+                data_data[i] = alpha * data_data[i] + (1-alpha) * old_value;
+                old_value=data_data[i];
+            }
+        }
+
+        template <typename T>
+        void apply_threshold(std::vector<T>* datas, const T threshold)
+        {
+            std::size_t data_size = datas->size();
+            T* data_data = datas->data();
+
+            for(std::size_t i=1; i<data_size; i++)
+            {
+                if(more_less(data_data[i],data_data[i-1],threshold))
+                    data_data[i]=data_data[i-1];
+            }
+        }
+
+        template <typename T>
+        void denoise(std::vector<T>* datas,
+                     const std::size_t noise_max_size,
+                     const T threshold)
+        {
+            std::size_t data_size = datas->size();
+            T* data_data = datas->data();
+
+            for(std::size_t i=0; i<data_size-noise_max_size+1; i++)
+            {
+//                std::size_t count = 0;
+//                while(!more_less(data_data[i], data_data[i+count+1],threshold))
+//                {
+//                    count++;
+//                    if(i+count+1 >= data_size)
+//                        break;
+//                }
+
+//                if(count<=noise_max_size)
+//                {
+//                    for(std::size_t j=0; j<count; j++)
+//                        data_data[i+1+j] = data_data[i];
+//                }
+
+//                count = 0;
+            }
         }
 
         /**

@@ -39,57 +39,81 @@ namespace crde
         }
 
         /** COMPUTATION **/
-        /**
-         * Here is the main algorithm: We compute over all videos a vector
-         * containing some specified metrics (ex: Pix sum, mean and variance...)
-         * Then we compare two sequences and find a common subsequence with
-         * a threshold (We need a threshold because the credits can vary and may
-         * have different compression artefacts).
-         * Finaly, we find the sequence with the same threshold in all the video
-         */
 
-        /** Computation of the metrics **/
-        std::vector< std::vector<utils::pic_stats> > pxstats;
+        std::size_t lcs_begin = 0;
+        std::size_t lcs_size = 0;
+        bool credits_found = false;
 
-        for(const std::vector< cv::Mat >& sequence : sequences )
-            pxstats.emplace_back(generate_pic_stats(sequence));
+        credits_found = find_longest_common_sequence(
+                    sequences[0], sequences[1], &lcs_begin, &lcs_size);
 
-        /** Comparison of two sequences **/
-        const utils::pic_stats threshold({50,50,50});
-        std::vector<utils::pic_stats> lcs =
-                utils::longest_common_subseq(pxstats[0],pxstats[1],threshold);
+        if(!credits_found)
+        {
+            std::cerr << "Can't find credits" << std::endl;
+            return utils::credits_tc();
+        }
 
-        const std::size_t credits_min_duration = 5;
         utils::credits_tc timecodes;
-        if(lcs.size() >= credits_min_duration)
-        {
-            /** Find the timecodes for the first two video **/
-            int credits_size = static_cast<int>(lcs.size());
-            for(std::size_t i=0; i<path_count; i++)
-            {
-                std::size_t index =
-                        utils::search_thresholded(pxstats[i], lcs,threshold);
-
-                if(index != pxstats.size())
-                {
-                    int start = static_cast<int>(index);
-                    timecodes.starts.push_back(start);
-                    timecodes.ends.push_back(start + credits_size-1);
-                }
-                else
-                {
-                    timecodes.starts.push_back(0);
-                    timecodes.ends.push_back(0);
-                }
-                timecodes.video_names.push_back(video_names[i]);
-            }
-        }
-        else
-        {
-            std::cerr << "Can't find the credits !" << std::endl;
-        }
+        timecodes.starts.push_back(
+                    static_cast<int>(lcs_begin));
+        timecodes.ends.push_back(
+                    static_cast<int>(lcs_begin+lcs_size-1));
+        timecodes.video_names.push_back(video_names[0]);
 
         return timecodes;
+    }
+
+    bool find_longest_common_sequence(
+            const std::vector< cv::Mat >& seq1,
+            const std::vector< cv::Mat >& seq2,
+            std::size_t* sequence_begin,
+            std::size_t* sequence_length)
+    {
+
+        std::size_t seq1_size = seq1.size();
+        std::size_t seq2_size = seq2.size();
+
+        std::vector<double> means1, means2;
+        means1.reserve(seq1_size);
+        means2.reserve(seq2_size);
+
+        for(const cv::Mat& image : seq1)
+            means1.push_back(cv::mean(cv::mean(image))[0]);
+
+        for(const cv::Mat& image : seq2)
+            means2.push_back(cv::mean(cv::mean(image))[0]);
+
+        for(std::size_t o=0; o<seq1_size; o++)
+        {
+            std::size_t zero_count=0;
+            const std::size_t offset = o;
+            std::vector<int> smoothed;
+            smoothed.reserve(seq1_size);
+            for(std::size_t i=offset; i<seq1_size; i++)
+                smoothed.push_back(
+                            static_cast<int>(means1[i-offset]-means2[i]));
+
+            utils::exponential_smoothing(&smoothed, 0.2);
+            utils::denoise(&smoothed,100,0);
+
+            for(std::size_t z=0; z<smoothed.size(); z++)
+                if(smoothed[z]==0) zero_count++;
+                else
+                {
+                    if(zero_count > *sequence_length)
+                    {
+                        *sequence_length = zero_count;
+                        *sequence_begin = z;
+                    }
+                }
+
+            std::cout << *sequence_length << std::endl;
+        }
+
+        if(!sequence_begin)
+            return false;
+
+        return true;
     }
 
     std::vector< cv::Mat > load_biff_from_dir(
@@ -160,46 +184,5 @@ namespace crde
         }
 
         return images;
-    }
-
-    std::vector<uint64_t> pixel_sum_sequence(
-            const std::vector< cv::Mat > images)
-    {
-        std::vector<uint64_t> pixel_sums;
-        pixel_sums.reserve(images.size());
-
-        for(const cv::Mat& image : images)
-        {
-            uint64_t sum = 0;
-            for(int y = 0; y < image.cols; y++)
-            {
-                for(int x = 0; x < image.rows; x++)
-                {
-                    sum += static_cast<uint64_t>( *image.ptr(x,y)
-                                               + *(image.ptr(x,y)+1)
-                                               + *(image.ptr(x,y)+2));
-                }
-            }
-
-            pixel_sums.emplace_back(sum);
-        }
-
-        return pixel_sums;
-    }
-
-    std::vector<utils::pic_stats> generate_pic_stats(
-            const std::vector< cv::Mat > image_sequence)
-    {
-        std::vector<utils::pic_stats> pixstats;
-        pixstats.reserve(image_sequence.size());
-
-        for(const cv::Mat& image : image_sequence)
-        {
-            cv::Mat means, stddeviation;
-            cv::meanStdDev(image, means, stddeviation);
-            pixstats.emplace_back(means);
-        }
-
-        return pixstats;
     }
 }

@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <iterator>
+#include <fstream>
 
 #include <boost/filesystem.hpp>
 
@@ -38,20 +39,11 @@ namespace crde
     std::vector< cv::Mat > load_biff_from_dir(
             const boost::filesystem::path& biff_folder);
 
-    /**
-     * @brief pixel_sum_sequence
-     * Compute on a vector of openCV image, a simple sum of each R,G and B
-     * Channel value for each frame, it is stored then into a vector of sums
-     * @param image_sequence
-     * Vector of openCV images
-     * @return
-     * Vector of sums of pixel
-     */
-    std::vector< uint64_t > pixel_sum_sequence(
-            const std::vector< cv::Mat > image_sequence);
-
-    std::vector<utils::pic_stats> generate_pic_stats(
-            const std::vector< cv::Mat > image_sequence);
+    bool find_longest_common_sequence(
+            const std::vector< cv::Mat >& seq1,
+            const std::vector< cv::Mat >& seq2,
+            std::size_t* sequence_begins,
+            std::size_t* sequence_length);
 
     /**
      * @brief operator <<
