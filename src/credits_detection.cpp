@@ -54,14 +54,12 @@ namespace crde
         for(const std::vector< cv::Mat >& sequence : sequences )
             pxstats.emplace_back(generate_pic_stats(sequence));
 
-        std::vector<utils::pic_stats> stats = generate_pic_stats(sequences[0]);
-
         /** Comparison of two sequences **/
-        const utils::pic_stats threshold(10,10);
+        const utils::pic_stats threshold({50,50,50});
         std::vector<utils::pic_stats> lcs =
                 utils::longest_common_subseq(pxstats[0],pxstats[1],threshold);
 
-        const std::size_t credits_min_duration = 2;
+        const std::size_t credits_min_duration = 5;
         utils::credits_tc timecodes;
         if(lcs.size() >= credits_min_duration)
         {
@@ -195,19 +193,11 @@ namespace crde
         std::vector<utils::pic_stats> pixstats;
         pixstats.reserve(image_sequence.size());
 
-        auto arithmetic_mean = [](const cv::Mat& matr)->double
-        {
-            return ( matr.at<double>(0,0)
-                    +matr.at<double>(1,0)
-                    +matr.at<double>(2,0))/3;
-        };
-
         for(const cv::Mat& image : image_sequence)
         {
             cv::Mat means, stddeviation;
             cv::meanStdDev(image, means, stddeviation);
-            pixstats.emplace_back(
-                        arithmetic_mean(means), arithmetic_mean(stddeviation));
+            pixstats.emplace_back(means);
         }
 
         return pixstats;

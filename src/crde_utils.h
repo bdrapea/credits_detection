@@ -36,11 +36,10 @@ namespace crde
          */
         struct pic_stats
         {
-            double mean;
-            double mean_standard_deviation;
+            std::array<double, 3> mean = {0};
 
-            pic_stats(double mn, double stdd):
-                mean(mn), mean_standard_deviation(stdd){}
+            pic_stats(std::array<double, 3> mn):
+                mean(mn){}
         };
 
         /**
@@ -81,10 +80,10 @@ namespace crde
         template <typename T>
         inline bool more_less(const T v1, const T v2, const T threshold)
         {
-            if((v1 <= v2 + threshold)
-                    && (v1 >= v2 - threshold))
-
+            if((v1 <= v2 + threshold) && (v1 >= v2 - threshold))
+            {
                 return true;
+            }
 
             return false;
         }

@@ -16,21 +16,21 @@ namespace crde
             std::size_t lcs_ind = 0;
             std::size_t lcs_size = 0;
 
-            for(std::size_t i = 0; i < seq1_size; i++)
+            for(std::size_t i = 0; i < seq1_size-1; i++)
             {
-                for(std::size_t j = 0; j < seq2_size; j++)
+                for(std::size_t j = 0; j < seq2_size-1; j++)
                 {
-                    if(more_less(seq1[i].mean, seq2[j].mean, threshold.mean)
-                    )
+                    if(more_less(seq1[i].mean[0], seq2[j].mean[0], threshold.mean[0])
+                    || more_less(seq1[i+1].mean[0], seq2[j+1].mean[0], threshold.mean[0]))
                     {
+
                         if(ind == seq1_size)
+                        {
                             ind = i;
+                        }
 
                         count++;
                         i++;
-
-                        if(i >= seq1_size)
-                            break;
                     }
                     else
                     {
@@ -39,6 +39,7 @@ namespace crde
                             lcs_ind = ind;
                             lcs_size = count;
                         }
+                        i -= count;
 
                         ind = seq1_size;
                         count = 0;
@@ -72,9 +73,10 @@ namespace crde
                                 "the size of the main sequence");
 
             std::size_t ind = 0;
-            for(std::size_t i=0; i<seq_size; i++)
+            for(std::size_t i=0; i<seq_size-1; i++)
             {
-                if(more_less(seq[i].mean,subseq[ind].mean, threshold.mean))
+                if(more_less(seq[i].mean[0],subseq[ind].mean[0], threshold.mean[0])
+                || more_less(seq[i+1].mean[0], subseq[ind+1].mean[0], threshold.mean[0]))
                 {
                     ind++;
 
