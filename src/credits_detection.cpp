@@ -38,6 +38,28 @@ namespace crde
             video_names.emplace_back(path.stem().string());
         }
 
+        /** Check if sequences have the same size **/
+        std::size_t result = 0;
+        bool turn = true;
+        for(std::vector< cv::Mat > images : sequences)
+        {
+            if(turn)
+            {
+                result += images.size();
+                turn = false;
+            }
+            else
+            {
+                result -= images.size();
+                turn = true;
+            }
+        }
+
+        if(result != 0)
+            throw exception("Bad sequences",
+                            "find_credits_timecodes",
+                            "Sequence of biffs are not the same size");
+
         /** COMPUTATION **/
 
         std::size_t lcs_begin = 0;
@@ -57,7 +79,7 @@ namespace crde
         timecodes.starts.push_back(
                     static_cast<int>(lcs_begin));
         timecodes.ends.push_back(
-                    static_cast<int>(lcs_begin+lcs_size-1));
+                    static_cast<int>(lcs_begin+lcs_size));
         timecodes.video_names.push_back(video_names[0]);
 
         return timecodes;
@@ -69,7 +91,6 @@ namespace crde
             std::size_t* sequence_begin,
             std::size_t* sequence_length)
     {
-
         std::size_t seq1_size = seq1.size();
         std::size_t seq2_size = seq2.size();
 
@@ -78,36 +99,104 @@ namespace crde
         means2.reserve(seq2_size);
 
         for(const cv::Mat& image : seq1)
-            means1.push_back(cv::mean(cv::mean(image))[0]);
+        {
+            cv::Mat std,me;;
+            cv::meanStdDev(image,me,std);
+            means1.push_back(cv::mean(image)[0]);
+        }
 
         for(const cv::Mat& image : seq2)
-            means2.push_back(cv::mean(cv::mean(image))[0]);
-
-        for(std::size_t o=0; o<seq1_size; o++)
         {
-            std::size_t zero_count=0;
-            const std::size_t offset = o;
-            std::vector<int> smoothed;
-            smoothed.reserve(seq1_size);
-            for(std::size_t i=offset; i<seq1_size; i++)
-                smoothed.push_back(
-                            static_cast<int>(means1[i-offset]-means2[i]));
+            cv::Mat std,me;
+            cv::meanStdDev(image,me,std);
+            means2.push_back(cv::mean(image)[0]);
+        }
 
-            utils::exponential_smoothing(&smoothed, 0.2);
-            utils::denoise(&smoothed,100,0);
+        //We try to found the longest subsequence of zeros for each offset
+        const std::size_t gliding_length = 2*seq1_size;
 
-            for(std::size_t z=0; z<smoothed.size(); z++)
-                if(smoothed[z]==0) zero_count++;
+        std::vector<std::size_t> max_zeros, max_zeros_ind;
+        max_zeros.reserve(gliding_length-1);
+        max_zeros_ind.reserve(gliding_length-1);
+
+        std::vector< std::vector<int> > result_seqs;
+        result_seqs.reserve(gliding_length-1);
+
+        for(std::size_t o=1; o<gliding_length; o++)
+        {
+            /** Size of the sequence to analyse **/
+            std::size_t analyse_length;
+            /** Vector of difference of the sequence means **/
+            std::vector<int> mean_diffs;
+
+            if(o < seq1_size)
+            {
+                analyse_length = o;
+                mean_diffs.reserve(analyse_length);
+                for(std::size_t i=0; i<analyse_length; i++)
+                {
+                    mean_diffs.push_back(
+                        static_cast<int>(
+                    std::abs(means1[i]-means2[seq1_size-analyse_length+i])));
+                }
+            }
+            else
+            {
+                analyse_length = gliding_length-o;
+                mean_diffs.reserve(analyse_length);
+                for(std::size_t i=0; i<analyse_length; i++)
+                {
+                    mean_diffs.push_back(
+                        static_cast<int>(
+                     std::abs(means1[seq1_size-analyse_length+i]-means2[i])));
+                }
+            }
+
+            utils::exponential_smoothing(&mean_diffs,0.05);
+            utils::denoise(&mean_diffs,100,0);
+
+            //Find the longest zeros sequence
+            std::size_t zero_seq = 0, max_zero_seq = 0, zeros_ind = 0;
+            const int* mean_dif_dat = mean_diffs.data();
+            for(std::size_t i=0; i<analyse_length; i++)
+            {
+                if(utils::more_less(mean_dif_dat[i],0,0))
+                    zero_seq++;
                 else
                 {
-                    if(zero_count > *sequence_length)
+                    if(zero_seq > max_zero_seq)
                     {
-                        *sequence_length = zero_count;
-                        *sequence_begin = z;
+                        max_zero_seq = zero_seq;
+                        if(o > seq1_size)
+                            zeros_ind = i-zero_seq + (o-seq1_size);
+                        else
+                            zeros_ind = i-zero_seq + (seq1_size-o);
                     }
+                    zero_seq = 0;
                 }
+            }
 
-            std::cout << *sequence_length << std::endl;
+            max_zeros.push_back(max_zero_seq);
+            max_zeros_ind.push_back(zeros_ind);
+            result_seqs.push_back(mean_diffs);
+        }
+
+        //Detection of the credit's length
+        for(std::size_t i=0; i<gliding_length-1; i++)
+        {
+            if(max_zeros[i]>*sequence_length)
+            {
+                *sequence_length = max_zeros[i];
+                *sequence_begin = max_zeros_ind[i];
+
+                std::cout << max_zeros[i] << ' ' << i << std::endl;
+
+                //We write the successful sequence to a file
+                std::ofstream file("/home/bdrapeaud/Bureau/test.txt");
+                for(int u : result_seqs[9760])
+                    file << u << std::endl;
+                file.close();
+            }
         }
 
         if(!sequence_begin)
@@ -178,7 +267,7 @@ namespace crde
         images.reserve(seq_size);
         for(const boost::filesystem::path& path: sorted_paths)
         {
-            cv::Mat image = cv::imread(path.string(), CV_LOAD_IMAGE_COLOR);
+            cv::Mat image = cv::imread(path.string(), CV_LOAD_IMAGE_GRAYSCALE);
             if(!image.empty())
                 images.emplace_back(image);
         }

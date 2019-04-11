@@ -51,6 +51,14 @@ namespace crde
             return false;
         }
 
+        /**
+         * @brief exponential_smoothing
+         * Apply an exponential smoothing on vector data
+         * @param datas
+         * Vector you want to smooth
+         * @param alpha
+         * Factor of smoothing going from 0 (strong) -> 1 (lite)
+         */
         template <typename T>
         void exponential_smoothing(std::vector<T>* datas, const double alpha)
         {
@@ -66,6 +74,14 @@ namespace crde
             }
         }
 
+        /**
+         * @brief apply_threshold
+         * Force values from vector to a certain threshold
+         * @param datas
+         * Data you want to apply the threshold (must be a std::vector)
+         * @param threshold
+         * Size of the threshold
+         */
         template <typename T>
         void apply_threshold(std::vector<T>* datas, const T threshold)
         {
@@ -79,31 +95,46 @@ namespace crde
             }
         }
 
+        /**
+         * @brief denoise
+         * Denoise algorithm force values from datas to a threshold that are
+         * consecutivly inferior to noise_max_size
+         * @param datas
+         * Vector of datas to denoise
+         * @param noise_max_size
+         * Interval of value to denoise
+         * @param threshold
+         * Threshold for tolerance
+         */
         template <typename T>
         void denoise(std::vector<T>* datas,
                      const std::size_t noise_max_size,
                      const T threshold)
         {
             std::size_t data_size = datas->size();
-            T* data_data = datas->data();
 
-            for(std::size_t i=0; i<data_size-noise_max_size+1; i++)
+            if(data_size > noise_max_size)
             {
-//                std::size_t count = 0;
-//                while(!more_less(data_data[i], data_data[i+count+1],threshold))
-//                {
-//                    count++;
-//                    if(i+count+1 >= data_size)
-//                        break;
-//                }
+                T* data_data = datas->data();
 
-//                if(count<=noise_max_size)
-//                {
-//                    for(std::size_t j=0; j<count; j++)
-//                        data_data[i+1+j] = data_data[i];
-//                }
+                for(std::size_t i=0; i<data_size-noise_max_size+1; i++)
+                {
+                    std::size_t count = 0;
+                    while(!more_less(data_data[i], data_data[i+count+1],threshold))
+                    {
+                        count++;
+                        if(i+count+1 >= data_size)
+                            break;
+                    }
 
-//                count = 0;
+                    if(count<=noise_max_size)
+                    {
+                        for(std::size_t j=0; j<count; j++)
+                            data_data[i+1+j] = data_data[i];
+                    }
+
+                    count = 0;
+                }
             }
         }
 

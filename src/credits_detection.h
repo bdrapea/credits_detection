@@ -6,11 +6,13 @@
 #include <iomanip>
 #include <iterator>
 #include <fstream>
+#include <sstream>
 
 #include <boost/filesystem.hpp>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 #include "crde_exception.h"
 #include "crde_utils.h"
@@ -39,6 +41,20 @@ namespace crde
     std::vector< cv::Mat > load_biff_from_dir(
             const boost::filesystem::path& biff_folder);
 
+    /**
+     * @brief find_longest_common_sequence
+     * This algorithm will find the common sequence of two vector of images
+     * @param seq1
+     * First sequence of images
+     * @param seq2
+     * Second sequence of images
+     * @param sequence_begins
+     * Begining of the first common sequence
+     * @param sequence_length
+     * Size of the first sequence's common sequence
+     * @return
+     * True if common sequence is found
+     */
     bool find_longest_common_sequence(
             const std::vector< cv::Mat >& seq1,
             const std::vector< cv::Mat >& seq2,
