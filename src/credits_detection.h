@@ -58,7 +58,8 @@ std::vector< cv::Mat > load_biff_from_dir(
 bool find_longest_common_sequence(
     const std::vector< cv::Mat >& seq1,
     const std::vector< cv::Mat >& seq2,
-    std::size_t* sequence_begins,
+    std::size_t* sequence1_begins,
+    std::size_t* sequence2_begins,
     std::size_t* sequence_length);
 
 /**
@@ -83,15 +84,15 @@ std::ostream& operator<<(std::ostream& os,
         *std::max_element(seq_sizes.begin(), seq_sizes.end());
 
     for(std::size_t i=0; i<max_size; i++)
-    {
-        os << i << ": ";
-        for(std::size_t j=0; j<pix_sum_seqs.size(); j++)
         {
-            if(i < pix_sum_seqs[j].size())
-                os << std::setw(10) << pix_sum_seqs[j][i] << ' ';
+            os << i << ": ";
+            for(std::size_t j=0; j<pix_sum_seqs.size(); j++)
+                {
+                    if(i < pix_sum_seqs[j].size())
+                        os << std::setw(10) << pix_sum_seqs[j][i] << ' ';
+                }
+            os << '\n';
         }
-        os << '\n';
-    }
 
     return os;
 }

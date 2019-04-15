@@ -9,6 +9,8 @@ std::ostream& operator<<(std::ostream& os,
 {
     std::size_t count = timecodes.starts.size();
 
+    os << "=========TIMECODES=========\n";
+
     for(std::size_t i=0; i<count; i++)
     {
         os << "Video: " << timecodes.video_names[i] << '\n'

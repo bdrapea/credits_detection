@@ -35,38 +35,32 @@ utils::credits_tc find_credits_timecodes(
         /** Getting the data **/
         //Load images in vector
         sequences.emplace_back(load_biff_from_dir(path));
-        video_names.emplace_back(path.stem().string());
+        video_names.emplace_back(path.filename().c_str());
     }
-
-    //Check if sequences have the same size
-    std::size_t result = 0;
-    bool turn = true;
-    for(const std::vector< cv::Mat >& images : sequences)
-    {
-        if(turn)
-        {
-            result += images.size();
-            turn = false;
-        }
-        else
-        {
-            result -= images.size();
-            turn = true;
-        }
-    }
-
-    if(result != 0)
-        throw exception("Bad sequences",
-                        "find_credits_timecodes",
-                        "Sequence of biffs are not the same size");
 
     /** COMPUTATION **/
-    std::size_t lcs_begin = 0;
-    std::size_t lcs_size = 0;
-    bool credits_found = false;
+    bool credits_found = true;
+    utils::credits_tc timecodes;
+    timecodes.video_names = video_names;
+    timecodes.starts.assign(path_count,0);
+    timecodes.ends.assign(path_count,0);
+    std::size_t credits_length;
+    std::size_t j=0;
 
-    credits_found = find_longest_common_sequence(
-                        sequences[0], sequences[1], &lcs_begin, &lcs_size);
+    for(; j<path_count-1; j++)
+    {
+        credits_length = 0;
+        credits_found *= find_longest_common_sequence(
+                                                sequences[j],
+                                                sequences[j+1],
+                                                &timecodes.starts[j],
+                                                &timecodes.starts[j+1],
+                                                &credits_length);
+
+        timecodes.ends[j] = timecodes.starts[j] + credits_length;
+    }
+
+    timecodes.ends[j] = timecodes.starts[j] + credits_length;
 
     if(!credits_found)
     {
@@ -74,20 +68,14 @@ utils::credits_tc find_credits_timecodes(
         return utils::credits_tc();
     }
 
-    utils::credits_tc timecodes;
-    timecodes.starts.push_back(
-        static_cast<int>(lcs_begin));
-    timecodes.ends.push_back(
-        static_cast<int>(lcs_begin+lcs_size));
-    timecodes.video_names.push_back(video_names[0]);
-
     return timecodes;
 }
 
 bool find_longest_common_sequence(
     const std::vector< cv::Mat >& seq1,
     const std::vector< cv::Mat >& seq2,
-    std::size_t* sequence_begin,
+    std::size_t* sequence1_begin,
+    std::size_t* sequence2_begin,
     std::size_t* sequence_length)
 {
     std::size_t seq1_size = seq1.size();
@@ -108,9 +96,10 @@ bool find_longest_common_sequence(
     //We try to found the longest subsequence of zeros for each offset
     const std::size_t gliding_length = 2*seq1_size;
 
-    std::vector<std::size_t> max_zeros, max_zeros_ind;
+    std::vector<std::size_t> max_zeros, max_zeros_ind1, max_zeros_ind2;
     max_zeros.reserve(gliding_length-1);
-    max_zeros_ind.reserve(gliding_length-1);
+    max_zeros_ind1.reserve(gliding_length-1);
+    max_zeros_ind2.reserve(gliding_length-1);
 
     std::vector< std::vector<int> > result_seqs;
     result_seqs.reserve(gliding_length-1);
@@ -147,11 +136,13 @@ bool find_longest_common_sequence(
         }
 
         //Smoothing the result to cancel noise
-        utils::exponential_smoothing(&mean_diffs, 0.2);
-        utils::denoise(&mean_diffs,20,0);
+//        utils::exponential_smoothing(&mean_diffs, 0.5);
+        utils::denoise(&mean_diffs,25,0);
 
         //Find the longest zeros sequence
-        std::size_t zero_seq = 0, max_zero_seq = 0, zeros_ind = 0;
+        std::size_t zero_seq = 0, max_zero_seq = 0;
+        std::size_t zeros_ind1 = 0, zeros_ind2 = 0;
+
         for(std::size_t i=0; i<analyse_length; i++)
         {
             if(utils::more_less(mean_diffs[i],0,0))
@@ -162,9 +153,15 @@ bool find_longest_common_sequence(
                 {
                     max_zero_seq = zero_seq;
                     if(o > seq1_size)
-                        zeros_ind = i-zero_seq + (o-seq1_size);
+                    {
+                        zeros_ind1 = i-zero_seq + (o-seq1_size);
+                        zeros_ind2 = zeros_ind1 - (o-seq1_size);
+                    }
                     else
-                        zeros_ind = i-zero_seq + (seq1_size-o);
+                    {
+                        zeros_ind1 = i-zero_seq + (seq1_size-o);
+                        zeros_ind2 = zeros_ind1 + (o-seq1_size);
+                    }
                 }
                 zero_seq = 0;
             }
@@ -175,15 +172,17 @@ bool find_longest_common_sequence(
 
         //Add result to main vectors
         max_zeros.push_back(max_zero_seq);
-        max_zeros_ind.push_back(zeros_ind);
+        max_zeros_ind1.push_back(zeros_ind1);
+        max_zeros_ind2.push_back(zeros_ind2);
         result_seqs.push_back(mean_diffs);
 
-        std::cout << "searching: "
+        std::cout << "2) SEARCHING: "
                   << std::fixed << std::setprecision(1)
                   << (100.0f/static_cast<float>(gliding_length))
-                  *static_cast<float>(o) <<'%'
+                  *static_cast<float>(o) <<'%'<< "\e[A"
                   << std::endl;
     }
+    std::cout << std::endl;
 
     file_zeros.close();
 
@@ -194,23 +193,41 @@ bool find_longest_common_sequence(
         if(max_zeros[i]>*sequence_length)
         {
             *sequence_length = max_zeros[i];
-            *sequence_begin = max_zeros_ind[i];
 
-            //We write the successful sequence to a file
-            std::ofstream file("/home/bdrapeaud/Bureau/test.txt");
-            for(int u : result_seqs[i])
-                file << u << std::endl;
-            file.close();
+            if(i > seq1_size)
+            {
+                *sequence1_begin = max_zeros_ind1[i];
+                *sequence2_begin = max_zeros_ind2[i];
+            }
+
+            else
+            {
+                *sequence1_begin = max_zeros_ind2[i];
+                *sequence2_begin = max_zeros_ind1[i];
+            }
+
         }
 
-        std::cout << "finalizing: "
+        std::cout << "3) FINALIZING: "
                   << std::fixed << std::setprecision(1)
                   << (100.0f/static_cast<float>(gliding_length))
-                  *static_cast<float>(i) <<'%'
+                  *static_cast<float>(i) <<'%' << "\e[A"
                   << std::endl;
     }
+    std::cout << std::endl;
 
-    return *sequence_begin != std::size_t(-1);
+    //We write the successful sequence to a file*
+    if(*sequence1_begin != std::size_t(-1))
+    {
+        std::ofstream file("/home/bdrapeaud/Bureau/test.txt");
+        for(int u : result_seqs[*sequence1_begin])
+            file << u << std::endl;
+        file.close();
+
+        return true;
+    }
+
+    return false;
 }
 
 std::vector< cv::Mat > load_biff_from_dir(
@@ -272,13 +289,18 @@ std::vector< cv::Mat > load_biff_from_dir(
     }
 
     // Load image
+    float progression = 0.0f;
     images.reserve(seq_size);
     for(const boost::filesystem::path& path: sorted_paths)
     {
         cv::Mat image = cv::imread(path.string(), CV_LOAD_IMAGE_GRAYSCALE);
         if(!image.empty())
             images.emplace_back(image);
+
+        std::cout << "1) LOADING: " << path.filename()  << "\e[A" << std::endl;
+        progression++;
     }
+    std::cout << std::endl;
 
     return images;
 }

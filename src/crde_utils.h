@@ -22,10 +22,10 @@ struct credits_tc
     int fps;
 
     /**< Numbers of the first image of the credits **/
-    std::vector<int> starts;
+    std::vector<std::size_t> starts;
 
     /**< Numbers of the last image of the credits **/
-    std::vector<int> ends;
+    std::vector<std::size_t> ends;
 
     /** Name of the videos **/
     std::vector<std::string> video_names;
