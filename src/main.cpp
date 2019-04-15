@@ -1,10 +1,14 @@
+#include <chrono>
 #include "credits_detection.h"
 
 int main(int argc, char** argv)
 {
+    /** Start chrono for time mesauring **/
+    auto start_time = std::chrono::high_resolution_clock::now();
+
     /** Loads the inputs from the console in a path vector **/
     std::vector< boost::filesystem::path > biff_directories;
-        biff_directories.reserve(
+    biff_directories.reserve(
         static_cast<std::size_t> (argc-1));
 
     if(argc <= 2)
@@ -30,6 +34,14 @@ int main(int argc, char** argv)
 
     /** Prints the timecodes **/
     std::cout << timecodes << std::endl;
+
+    /** Print the time of processing **/
+    auto stop_time = std::chrono::high_resolution_clock::now();
+    auto test = std::chrono::duration_cast <std::chrono::duration<double> >(
+                    stop_time - start_time);
+
+    std::cout << "Processing took = " << test.count() << "s" << std::endl;
+
 
     return 0;
 }
