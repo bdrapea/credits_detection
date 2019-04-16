@@ -62,6 +62,12 @@ bool find_longest_common_sequence(
     std::size_t* sequence2_begins,
     std::size_t* sequence_length);
 
+bool search_for_subsequence(const std::vector< cv::Mat >& subsequence,
+                            const std::vector< cv::Mat >& sequence,
+                            const float tolerance = 0.9f,
+                            std::size_t* start = nullptr,
+                            std::size_t* length = nullptr);
+
 /**
  * @brief operator <<
  * Print generics vector properly
@@ -84,15 +90,15 @@ std::ostream& operator<<(std::ostream& os,
         *std::max_element(seq_sizes.begin(), seq_sizes.end());
 
     for(std::size_t i=0; i<max_size; i++)
+    {
+        os << i << ": ";
+        for(std::size_t j=0; j<pix_sum_seqs.size(); j++)
         {
-            os << i << ": ";
-            for(std::size_t j=0; j<pix_sum_seqs.size(); j++)
-                {
-                    if(i < pix_sum_seqs[j].size())
-                        os << std::setw(10) << pix_sum_seqs[j][i] << ' ';
-                }
-            os << '\n';
+            if(i < pix_sum_seqs[j].size())
+                os << std::setw(10) << pix_sum_seqs[j][i] << ' ';
         }
+        os << '\n';
+    }
 
     return os;
 }

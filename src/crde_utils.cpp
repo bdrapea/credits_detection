@@ -4,17 +4,62 @@ namespace crde
 {
 namespace  utils
 {
+std::string frame_to_time(std::size_t frames, const float fps)
+{
+    std::size_t tmp_frames = frames;
+    std::size_t nb_frames = frames % static_cast<std::size_t>(fps);
+    frames /= static_cast<std::size_t>(fps);
+    std::size_t nb_seconds = frames % 60;
+    frames /= 60;
+    std::size_t nb_minutes = frames % 60;
+    frames /= 60;
+    std::size_t nb_hours = frames % 60;
+    std::stringstream times;
+
+    auto two_number_display = [](const std::size_t num)->std::string
+    {
+        std::string num_str;
+        if(num < 10)
+            num_str = std::string("0") + std::to_string(num);
+        else
+            num_str = std::to_string(num);
+
+        return num_str;
+    };
+
+    times << two_number_display(nb_hours);
+    times << ':';
+    times << two_number_display(nb_minutes);
+    times << ':';
+    times << two_number_display(nb_seconds);
+    times << '.';
+    times << two_number_display(nb_frames);
+
+    return times.str();
+}
+
 std::ostream& operator<<(std::ostream& os,
                          const utils::credits_tc& timecodes)
 {
-    std::size_t count = timecodes.starts.size();
+    const std::size_t count = timecodes.starts.size();
 
     os << "=========TIMECODES=========\n";
 
     for(std::size_t i=0; i<count; i++)
     {
-        os << "Video: " << timecodes.video_names[i] << '\n'
-           << timecodes.starts[i] << " --> " << timecodes.ends[i] << "\n\n";
+        os << std::setw(6)
+           << "Video: " << timecodes.video_names[i] << '\n'
+           << frame_to_time(timecodes.starts[i],25.0f)
+           << " --> "
+           << frame_to_time(timecodes.ends[i],25.0f)
+           << " = "
+           << frame_to_time(timecodes.ends[i]-timecodes.starts[i],25.0f)
+           << '\n'
+           << timecodes.starts[i]
+           << " --> "
+           << timecodes.ends[i]
+           << "\n\n";
+
     }
 
     return os;

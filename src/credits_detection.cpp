@@ -39,34 +39,93 @@ utils::credits_tc find_credits_timecodes(
     }
 
     /** COMPUTATION **/
-    bool credits_found = true;
+    // Initialize return value
     utils::credits_tc timecodes;
     timecodes.video_names = video_names;
     timecodes.starts.assign(path_count,0);
     timecodes.ends.assign(path_count,0);
-    std::size_t credits_length;
-    std::size_t j=0;
 
-    for(; j<path_count-1; j++)
-    {
-        credits_length = 0;
-        credits_found *= find_longest_common_sequence(
-                                                sequences[j],
-                                                sequences[j+1],
-                                                &timecodes.starts[j],
-                                                &timecodes.starts[j+1],
-                                                &credits_length);
+    /**< Flag telling if we found the credits while comparing the
+     * two sequences **/
+    bool credits_found;
+    /**< Length of credits in frames **/
+    std::size_t credits_length = 0;
 
-        timecodes.ends[j] = timecodes.starts[j] + credits_length;
-    }
-
-    timecodes.ends[j] = timecodes.starts[j] + credits_length;
+    //MAIN ALGORITHM
+    //Find the repeating pattern
+    credits_length = 0;
+    credits_found = find_longest_common_sequence(
+                         sequences[0],
+                         sequences[1],
+                         &timecodes.starts[0],
+                         &timecodes.starts[1],
+                         &credits_length);
+    timecodes.ends[0] = timecodes.starts[0] + credits_length;
 
     if(!credits_found)
     {
         std::cerr << "Can't find credits" << std::endl;
         return utils::credits_tc();
     }
+
+    if(path_count == 2)
+        return timecodes;
+
+    credits_found = find_longest_common_sequence(
+                         sequences[1],
+                         sequences[2],
+                         &timecodes.starts[1],
+                         &timecodes.starts[2],
+                         &credits_length);
+    timecodes.ends[1] = timecodes.starts[1] + credits_length;
+
+    std::vector< cv::Mat > sub_seq1 =
+            utils::sub_vector(sequences[0],
+            timecodes.starts[0],
+            timecodes.ends[0] - timecodes.starts[0]);
+    std::vector< cv::Mat > sub_seq2 =
+            utils::sub_vector(sequences[1],
+            timecodes.starts[1],
+            timecodes.ends[1] - timecodes.starts[1]);
+
+    std::size_t sub_seq1_size = sub_seq1.size();
+    std::size_t sub_seq2_size = sub_seq2.size();
+
+    std::cout << "CHECKING: "
+              << sub_seq1_size << ' ' << sub_seq2_size << std::endl;
+    if(sub_seq1_size > sub_seq2_size)
+        credits_found = search_for_subsequence(sub_seq2,sub_seq1);
+    else
+        credits_found = search_for_subsequence(sub_seq1,sub_seq2);
+
+    if(!credits_found)
+    {
+        std::cerr << "Common sub_sequence are different: Can't find credits"
+                  << std::endl;
+        return utils::credits_tc();
+    }
+
+    //Searching credits in other episode
+    std::vector< cv::Mat > sequence_to_find =
+        utils::sub_vector(sequences[0], timecodes.starts[0], credits_length);
+    for(std::size_t i= 0; i<path_count; i++)
+    {
+        bool found = search_for_subsequence(
+                    sequence_to_find,
+                    sequences[i],
+                    0.5f,
+                    &timecodes.starts[i],
+                    &credits_length);
+
+        timecodes.ends[i] = timecodes.starts[i] + credits_length;
+
+        if(!found)
+        {
+            timecodes.starts[i] = std::size_t(-1);
+            timecodes.ends[i] = std::size_t(-1);
+        }
+    }
+
 
     return timecodes;
 }
@@ -115,29 +174,28 @@ bool find_longest_common_sequence(
         if(o < seq1_size)
         {
             analyse_length = o;
-            mean_diffs.reserve(analyse_length);
+            mean_diffs.assign(analyse_length,0);
             for(std::size_t i=0; i<analyse_length; i++)
             {
-                mean_diffs.push_back(
+                mean_diffs[i]=
                     static_cast<int>(
-                        std::abs(means1[i]-means2[seq1_size-analyse_length+i])));
+                        std::abs(means1[i]-means2[seq1_size-analyse_length+i]));
             }
         }
         else
         {
             analyse_length = gliding_length-o;
-            mean_diffs.reserve(analyse_length);
+            mean_diffs.assign(analyse_length,0);
             for(std::size_t i=0; i<analyse_length; i++)
             {
-                mean_diffs.push_back(
+                mean_diffs[i]=
                     static_cast<int>(
-                        std::abs(means1[seq1_size-analyse_length+i]-means2[i])));
+                        std::abs(means1[seq1_size-analyse_length+i]-means2[i]));
             }
         }
 
         //Smoothing the result to cancel noise
-//        utils::exponential_smoothing(&mean_diffs, 0.5);
-        utils::denoise(&mean_diffs,25,0);
+//        utils::denoise(&mean_diffs,10,0);
 
         //Find the longest zeros sequence
         std::size_t zero_seq = 0, max_zero_seq = 0;
@@ -145,7 +203,7 @@ bool find_longest_common_sequence(
 
         for(std::size_t i=0; i<analyse_length; i++)
         {
-            if(utils::more_less(mean_diffs[i],0,0))
+            if(utils::more_less(mean_diffs[i],0,2))
                 zero_seq++;
             else
             {
@@ -207,12 +265,6 @@ bool find_longest_common_sequence(
             }
 
         }
-
-        std::cout << "3) FINALIZING: "
-                  << std::fixed << std::setprecision(1)
-                  << (100.0f/static_cast<float>(gliding_length))
-                  *static_cast<float>(i) <<'%' << "\e[A"
-                  << std::endl;
     }
     std::cout << std::endl;
 
@@ -226,6 +278,67 @@ bool find_longest_common_sequence(
 
         return true;
     }
+
+    return false;
+}
+
+bool search_for_subsequence(
+        const std::vector< cv::Mat >& subsequence,
+        const std::vector< cv::Mat >& sequence,
+        const float tolerance,
+        std::size_t* start,
+        std::size_t* length)
+{
+    std::size_t sub_size = subsequence.size();
+    std::size_t seq_size = sequence.size();
+
+    //Compute mean of picel for each sequence
+    std::vector<int> means_sub, means;
+    means_sub.reserve(sub_size);
+    means.reserve(seq_size);
+    for(const cv::Mat& image : subsequence)
+        means_sub.push_back(static_cast<int>(
+                    cv::mean(cv::mean(image))[0]));
+
+    for(const cv::Mat& image : sequence)
+        means.push_back(static_cast<int>(
+                    cv::mean(cv::mean(image))[0]));
+
+    //We try to find the sub sequence in it
+    std::size_t max = 0, ind = 0;
+    std::size_t gliding_length = seq_size - sub_size;
+
+    for(std::size_t i=0; i<gliding_length+1; i++)
+    {
+        std::size_t count = 0;
+        for(std::size_t j=0; j<sub_size; j++)
+        {
+            if(utils::more_less(means[i+j],means_sub[j],2))
+                count++;
+        }
+
+        if(count > max)
+        {
+            max = count;
+            ind = i;
+        }
+        std::cout << "2) SEARCHING SUBSEQ: "
+                  << std::fixed << std::setprecision(1)
+                  << (100.0f/static_cast<float>(gliding_length+1))
+                  *static_cast<float>(i) <<'%'<< "\e[A"
+                  << std::endl;
+    }
+
+    const std::size_t minimum_length = static_cast<std::size_t>(
+                static_cast<float>(sub_size)*tolerance);
+
+    if(start != nullptr)
+        *start = ind;
+    if(length != nullptr)
+        *length = max;
+
+    if(max >= minimum_length)
+        return true;
 
     return false;
 }

@@ -5,6 +5,8 @@
 #include <string>
 #include <algorithm>
 #include <array>
+#include <sstream>
+#include <iomanip>
 
 #include "crde_exception.h"
 
@@ -19,7 +21,7 @@ namespace utils
 struct credits_tc
 {
     /** Frame per seconds **/
-    int fps;
+    int fps = 25;
 
     /**< Numbers of the first image of the credits **/
     std::vector<std::size_t> starts;
@@ -137,6 +139,16 @@ void denoise(std::vector<T>* datas,
         }
     }
 }
+
+template <typename T>
+inline std::vector<T> sub_vector(const std::vector<T>& vector,
+                                 std::size_t start,
+                                 std::size_t length)
+{
+    return std::vector<T>(vector.begin() +start, vector.begin()+ start+length);
+}
+
+std::string frame_to_time(std::size_t frames, const float fps);
 
 /**
  * @brief operator <<
