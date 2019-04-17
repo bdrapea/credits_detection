@@ -48,7 +48,9 @@ std::vector< cv::Mat > load_biff_from_dir(
  * First sequence of images
  * @param seq2
  * Second sequence of images
- * @param sequence_begins
+ * @param sequence_begins1
+ * Begining of the first common sequence
+ * @param sequence_begins1
  * Begining of the first common sequence
  * @param sequence_length
  * Size of the first sequence's common sequence
@@ -62,6 +64,23 @@ bool find_longest_common_sequence(
     std::size_t* sequence2_begins,
     std::size_t* sequence_length);
 
+/**
+ * @brief search_for_subsequence
+ * Look for a looking alike sub-vector of images in a bigger vector
+ * @param subsequence
+ * Subvector to find
+ * @param sequence
+ * Main vector to search into
+ * @param tolerance
+ * Value between 0 (0%) -> 1 (100%) which determine the minimum ressemblance
+ * of the sub-vector to find
+ * @param start
+ * return value of the index where the sub-vector is
+ * @param length
+ * return value of the length of the sub-vector
+ * @return
+ * False if it doesn't find the sub-vector
+ */
 bool search_for_subsequence(const std::vector< cv::Mat >& subsequence,
                             const std::vector< cv::Mat >& sequence,
                             const float tolerance = 0.9f,

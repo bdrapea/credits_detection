@@ -38,6 +38,7 @@ utils::credits_tc find_credits_timecodes(
         video_names.emplace_back(path.filename().c_str());
     }
 
+
     /** COMPUTATION **/
     // Initialize return value
     utils::credits_tc timecodes;
@@ -55,11 +56,11 @@ utils::credits_tc find_credits_timecodes(
     //Find the repeating pattern
     credits_length = 0;
     credits_found = find_longest_common_sequence(
-                         sequences[0],
-                         sequences[1],
-                         &timecodes.starts[0],
-                         &timecodes.starts[1],
-                         &credits_length);
+                        sequences[0],
+                        sequences[1],
+                        &timecodes.starts[0],
+                        &timecodes.starts[1],
+                        &credits_length);
     timecodes.ends[0] = timecodes.starts[0] + credits_length;
 
     if(!credits_found)
@@ -72,31 +73,38 @@ utils::credits_tc find_credits_timecodes(
         return timecodes;
 
     credits_found = find_longest_common_sequence(
-                         sequences[1],
-                         sequences[2],
-                         &timecodes.starts[1],
-                         &timecodes.starts[2],
-                         &credits_length);
+                        sequences[1],
+                        sequences[2],
+                        &timecodes.starts[1],
+                        &timecodes.starts[2],
+                        &credits_length);
     timecodes.ends[1] = timecodes.starts[1] + credits_length;
 
+    if(!credits_found)
+    {
+        std::cerr << "Can't find credits" << std::endl;
+        return utils::credits_tc();
+    }
+
+    //Getting the two repeating sequence from checking
     std::vector< cv::Mat > sub_seq1 =
-            utils::sub_vector(sequences[0],
-            timecodes.starts[0],
-            timecodes.ends[0] - timecodes.starts[0]);
+        utils::sub_vector(sequences[0],
+                          timecodes.starts[0],
+                          timecodes.ends[0] - timecodes.starts[0]);
     std::vector< cv::Mat > sub_seq2 =
-            utils::sub_vector(sequences[1],
-            timecodes.starts[1],
-            timecodes.ends[1] - timecodes.starts[1]);
+        utils::sub_vector(sequences[1],
+                          timecodes.starts[1],
+                          timecodes.ends[1] - timecodes.starts[1]);
 
     std::size_t sub_seq1_size = sub_seq1.size();
     std::size_t sub_seq2_size = sub_seq2.size();
 
-    std::cout << "CHECKING: "
-              << sub_seq1_size << ' ' << sub_seq2_size << std::endl;
+    std::cout << "CHECKING COMMON SEQUENCES: " << std::flush;
+
     if(sub_seq1_size > sub_seq2_size)
-        credits_found = search_for_subsequence(sub_seq2,sub_seq1);
+        credits_found = search_for_subsequence(sub_seq2,sub_seq1,0.8f);
     else
-        credits_found = search_for_subsequence(sub_seq1,sub_seq2);
+        credits_found = search_for_subsequence(sub_seq1,sub_seq2,0.8f);
 
     if(!credits_found)
     {
@@ -105,27 +113,55 @@ utils::credits_tc find_credits_timecodes(
         return utils::credits_tc();
     }
 
-    //Searching credits in other episode
+    std::cout << "OK" << std::endl;
+
+    //Searching common sequence in other episode
     std::vector< cv::Mat > sequence_to_find =
         utils::sub_vector(sequences[0], timecodes.starts[0], credits_length);
-    for(std::size_t i= 0; i<path_count; i++)
+    float ressemblance = 0.99f;
+
+    for(std::size_t i= 0; i<path_count-1; i++)
     {
         bool found = search_for_subsequence(
-                    sequence_to_find,
-                    sequences[i],
-                    0.5f,
-                    &timecodes.starts[i],
-                    &credits_length);
+                         sequence_to_find,
+                         sequences[i],
+                         ressemblance,
+                         &timecodes.starts[i],
+                         &credits_length);
+
 
         timecodes.ends[i] = timecodes.starts[i] + credits_length;
-
         if(!found)
         {
-            timecodes.starts[i] = std::size_t(-1);
-            timecodes.ends[i] = std::size_t(-1);
-        }
-    }
 
+            while(!found)
+            {
+                ressemblance -= 0.01f;
+                std::cout << "i=" << i <<' ' << ressemblance <<  std::endl;
+                found = search_for_subsequence(
+                                 sequence_to_find,
+                                 sequences[i],
+                                 ressemblance,
+                                 &timecodes.starts[i],
+                                 &credits_length);
+
+                if(ressemblance < 0.5f)
+                {
+                    std::cerr << "Can't find timecode" << std::endl;
+                    return utils::credits_tc();
+                }
+
+
+            }
+
+            sequence_to_find = utils::sub_vector(sequences[i+1],
+                                                 timecodes.starts[i+1],
+                                                 credits_length);
+
+            ressemblance = 0.99f;
+        }
+
+    }
 
     return timecodes;
 }
@@ -145,11 +181,22 @@ bool find_longest_common_sequence(
     std::vector<double> means1, means2;
     means1.reserve(seq1_size);
     means2.reserve(seq2_size);
+
+    std::ofstream file1("/home/vqserver2/Bureau/t1.txt"), file2("/home/vqserver2/Bureau/t2.txt");
     for(const cv::Mat& image : seq1)
+    {
         means1.push_back(cv::mean(cv::mean(image))[0]);
+        file1 << cv::mean(cv::mean(image))[0] << '\n';
+    }
 
     for(const cv::Mat& image : seq2)
+    {
         means2.push_back(cv::mean(cv::mean(image))[0]);
+        file2 <<cv::mean(cv::mean(image))[0] << '\n';
+    }
+
+    file1.close();
+    file2.close();
 
     /** COMPUTATION **/
     //We try to found the longest subsequence of zeros for each offset
@@ -203,7 +250,7 @@ bool find_longest_common_sequence(
 
         for(std::size_t i=0; i<analyse_length; i++)
         {
-            if(utils::more_less(mean_diffs[i],0,2))
+            if(utils::more_less(mean_diffs[i],0,0))
                 zero_seq++;
             else
             {
@@ -234,11 +281,10 @@ bool find_longest_common_sequence(
         max_zeros_ind2.push_back(zeros_ind2);
         result_seqs.push_back(mean_diffs);
 
-        std::cout << "2) SEARCHING: "
+        std::cout << "SEARCH COMMON SEQUENCE: "
                   << std::fixed << std::setprecision(1)
                   << (100.0f/static_cast<float>(gliding_length))
-                  *static_cast<float>(o) <<'%'<< "\e[A"
-                  << std::endl;
+                  *static_cast<float>(o) <<'%'<< "\e[A" << std::endl;
     }
     std::cout << std::endl;
 
@@ -266,7 +312,6 @@ bool find_longest_common_sequence(
 
         }
     }
-    std::cout << std::endl;
 
     //We write the successful sequence to a file*
     if(*sequence1_begin != std::size_t(-1))
@@ -283,11 +328,11 @@ bool find_longest_common_sequence(
 }
 
 bool search_for_subsequence(
-        const std::vector< cv::Mat >& subsequence,
-        const std::vector< cv::Mat >& sequence,
-        const float tolerance,
-        std::size_t* start,
-        std::size_t* length)
+    const std::vector< cv::Mat >& subsequence,
+    const std::vector< cv::Mat >& sequence,
+    const float tolerance,
+    std::size_t* start,
+    std::size_t* length)
 {
     std::size_t sub_size = subsequence.size();
     std::size_t seq_size = sequence.size();
@@ -298,11 +343,11 @@ bool search_for_subsequence(
     means.reserve(seq_size);
     for(const cv::Mat& image : subsequence)
         means_sub.push_back(static_cast<int>(
-                    cv::mean(cv::mean(image))[0]));
+                                cv::mean(cv::mean(image))[0]));
 
     for(const cv::Mat& image : sequence)
         means.push_back(static_cast<int>(
-                    cv::mean(cv::mean(image))[0]));
+                            cv::mean(cv::mean(image))[0]));
 
     //We try to find the sub sequence in it
     std::size_t max = 0, ind = 0;
@@ -311,9 +356,9 @@ bool search_for_subsequence(
     for(std::size_t i=0; i<gliding_length+1; i++)
     {
         std::size_t count = 0;
-        for(std::size_t j=0; j<sub_size; j++)
+        for(std::size_t j=sub_size-1; j>0; j--)
         {
-            if(utils::more_less(means[i+j],means_sub[j],2))
+            if(utils::more_less(means[i+j],means_sub[j],1))
                 count++;
         }
 
@@ -322,15 +367,12 @@ bool search_for_subsequence(
             max = count;
             ind = i;
         }
-        std::cout << "2) SEARCHING SUBSEQ: "
-                  << std::fixed << std::setprecision(1)
-                  << (100.0f/static_cast<float>(gliding_length+1))
-                  *static_cast<float>(i) <<'%'<< "\e[A"
-                  << std::endl;
     }
 
+    std::cout << ind << ' ' << max << std::endl;
+
     const std::size_t minimum_length = static_cast<std::size_t>(
-                static_cast<float>(sub_size)*tolerance);
+                                           static_cast<float>(sub_size)*tolerance);
 
     if(start != nullptr)
         *start = ind;
@@ -410,7 +452,7 @@ std::vector< cv::Mat > load_biff_from_dir(
         if(!image.empty())
             images.emplace_back(image);
 
-        std::cout << "1) LOADING: " << path.filename()  << "\e[A" << std::endl;
+        std::cout << "LOADING BIFF: " << path.filename()  << "\e[A" << std::endl;
         progression++;
     }
     std::cout << std::endl;

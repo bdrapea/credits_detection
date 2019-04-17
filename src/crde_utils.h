@@ -81,7 +81,7 @@ void exponential_smoothing(std::vector<T>* datas, const double alpha)
  * Force values from vector to a certain threshold
  * @param datas
  * Data you want to apply the threshold (must be a std::vector)
- * @param threshold
+ * @param thresshold
  * Size of the threshold
  */
 template <typename T>
@@ -140,6 +140,18 @@ void denoise(std::vector<T>* datas,
     }
 }
 
+/**
+ * @brief sub_vector
+ * Extract a part in a vector
+ * @param vector
+ * Vector to extract
+ * @param start
+ * index of the beginning of the extractiond
+ * @param length
+ * Length of the part
+ * @return
+ * Extracted sub_vector
+ */
 template <typename T>
 inline std::vector<T> sub_vector(const std::vector<T>& vector,
                                  std::size_t start,

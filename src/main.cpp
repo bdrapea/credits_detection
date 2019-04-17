@@ -38,12 +38,11 @@ int main(int argc, char** argv)
     /** Print the time of processing **/
     auto stop_time = std::chrono::high_resolution_clock::now();
     auto process_duration =
-            std::chrono::duration_cast <std::chrono::duration<double> >(
-                    stop_time - start_time);
+        std::chrono::duration_cast <std::chrono::duration<double> >(
+            stop_time - start_time);
 
     std::cout << "Processing took " << process_duration.count() << "s"
               << std::endl;
-
 
     return 0;
 }
