@@ -42,6 +42,32 @@ std::vector< cv::Mat > load_biff_from_dir(
     const boost::filesystem::path& biff_folder);
 
 /**
+ * @brief search_for_subsequence
+ * Look for a looking alike sub-vector of images in a bigger vector
+ * @param subsequence
+ * Subvector to find
+ * @param sequence
+ * Main vector to search into
+ * @param tolerance
+ * Value between 0 (0%) -> 1 (100%) which determine the minimum ressemblance
+ * of the sub-vector to find
+ * @param start
+ * return value of the index where the sub-vector is
+ * @param length
+ * return value of the length of the sub-vector
+ * @param ressemblance
+ * return value of the ressemblance of the vector
+ * @return
+ * False if it doesn't find the sub-vector
+ */
+bool search_for_subsequence(const std::vector< cv::Mat >& subsequence,
+                            const std::vector< cv::Mat >& sequence,
+                            const float tolerance = 0.9f,
+                            float* ressemblance = nullptr,
+                            std::size_t* start = nullptr,
+                            std::size_t* length = nullptr);
+
+/**
  * @brief find_longest_common_sequence
  * This algorithm will find the common sequence of two vector of images
  * @param seq1
@@ -63,29 +89,6 @@ bool find_longest_common_sequence(
     std::size_t* sequence1_begins,
     std::size_t* sequence2_begins,
     std::size_t* sequence_length);
-
-/**
- * @brief search_for_subsequence
- * Look for a looking alike sub-vector of images in a bigger vector
- * @param subsequence
- * Subvector to find
- * @param sequence
- * Main vector to search into
- * @param tolerance
- * Value between 0 (0%) -> 1 (100%) which determine the minimum ressemblance
- * of the sub-vector to find
- * @param start
- * return value of the index where the sub-vector is
- * @param length
- * return value of the length of the sub-vector
- * @return
- * False if it doesn't find the sub-vector
- */
-bool search_for_subsequence(const std::vector< cv::Mat >& subsequence,
-                            const std::vector< cv::Mat >& sequence,
-                            const float tolerance = 0.9f,
-                            std::size_t* start = nullptr,
-                            std::size_t* length = nullptr);
 
 /**
  * @brief operator <<

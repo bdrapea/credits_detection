@@ -48,119 +48,53 @@ utils::credits_tc find_credits_timecodes(
 
     /**< Flag telling if we found the credits while comparing the
      * two sequences **/
-    bool credits_found;
-    /**< Length of credits in frames **/
-    std::size_t credits_length = 0;
+    bool ended = false;
+    // We take two arbitrary references
+    std::vector< cv::Mat > ref_1 = sequences[0];
+    std::vector< cv::Mat > ref_2 = sequences[1];
 
-    //MAIN ALGORITHM
-    //Find the repeating pattern
-    credits_length = 0;
-    credits_found = find_longest_common_sequence(
-                        sequences[0],
-                        sequences[1],
-                        &timecodes.starts[0],
-                        &timecodes.starts[1],
-                        &credits_length);
-    timecodes.ends[0] = timecodes.starts[0] + credits_length;
-
-    if(!credits_found)
+    while(!ended)
     {
-        std::cerr << "Can't find credits" << std::endl;
-        return utils::credits_tc();
-    }
+        // We find the longest common sequence between those two
+        std::size_t comseq1_start = 0;
+        std::size_t comseq2_start = 0;
+        std::size_t comseq_size = 0;
+        find_longest_common_sequence(
+                    ref_1,ref_2,&comseq1_start, &comseq2_start, &comseq_size);
 
-    if(path_count == 2)
-        return timecodes;
+        // We extract the common sequence
+        std::vector< cv::Mat > com_seq =
+                utils::sub_vector(ref_1,comseq1_start,comseq_size);
 
-    credits_found = find_longest_common_sequence(
-                        sequences[1],
-                        sequences[2],
-                        &timecodes.starts[1],
-                        &timecodes.starts[2],
-                        &credits_length);
-    timecodes.ends[1] = timecodes.starts[1] + credits_length;
-
-    if(!credits_found)
-    {
-        std::cerr << "Can't find credits" << std::endl;
-        return utils::credits_tc();
-    }
-
-    //Getting the two repeating sequence from checking
-    std::vector< cv::Mat > sub_seq1 =
-        utils::sub_vector(sequences[0],
-                          timecodes.starts[0],
-                          timecodes.ends[0] - timecodes.starts[0]);
-    std::vector< cv::Mat > sub_seq2 =
-        utils::sub_vector(sequences[1],
-                          timecodes.starts[1],
-                          timecodes.ends[1] - timecodes.starts[1]);
-
-    std::size_t sub_seq1_size = sub_seq1.size();
-    std::size_t sub_seq2_size = sub_seq2.size();
-
-    std::cout << "CHECKING COMMON SEQUENCES: " << std::flush;
-
-    if(sub_seq1_size > sub_seq2_size)
-        credits_found = search_for_subsequence(sub_seq2,sub_seq1,0.8f);
-    else
-        credits_found = search_for_subsequence(sub_seq1,sub_seq2,0.8f);
-
-    if(!credits_found)
-    {
-        std::cerr << "Common sub_sequence are different: Can't find credits"
-                  << std::endl;
-        return utils::credits_tc();
-    }
-
-    std::cout << "OK" << std::endl;
-
-    //Searching common sequence in other episode
-    std::vector< cv::Mat > sequence_to_find =
-        utils::sub_vector(sequences[0], timecodes.starts[0], credits_length);
-    float ressemblance = 0.99f;
-
-    for(std::size_t i= 0; i<path_count-1; i++)
-    {
-        bool found = search_for_subsequence(
-                         sequence_to_find,
-                         sequences[i],
-                         ressemblance,
-                         &timecodes.starts[i],
-                         &credits_length);
-
-
-        timecodes.ends[i] = timecodes.starts[i] + credits_length;
-        if(!found)
+        // Then for we check the ressemblance with this common sequence and all
+        // episode
+        std::size_t star = 0;
+        std::size_t siz = 0;
+        float ress = 0.0f;
+        bool pass = false;
+        for(std::size_t i=0; i<path_count; i++)
         {
+            bool found = search_for_subsequence(
+                        com_seq, sequences[i], 0.98f,&ress,&star,&siz);
 
-            while(!found)
+            std::cout << std::setprecision(2) << i << ' '
+                      << ress << ' ' << star
+                      << ' ' << siz << std::endl;
+
+            timecodes.starts[i] = star;
+            timecodes.ends[i] = star + siz;
+
+            if(!found)
             {
-                ressemblance -= 0.01f;
-                std::cout << "i=" << i <<' ' << ressemblance <<  std::endl;
-                found = search_for_subsequence(
-                                 sequence_to_find,
-                                 sequences[i],
-                                 ressemblance,
-                                 &timecodes.starts[i],
-                                 &credits_length);
-
-                if(ressemblance < 0.5f)
-                {
-                    std::cerr << "Can't find timecode" << std::endl;
-                    return utils::credits_tc();
-                }
-
-
+                pass = true;
+                ref_2 = sequences[i];
+                break;
             }
-
-            sequence_to_find = utils::sub_vector(sequences[i+1],
-                                                 timecodes.starts[i+1],
-                                                 credits_length);
-
-            ressemblance = 0.99f;
         }
-
+        if(!pass)
+        {
+            ended = true;
+        }
     }
 
     return timecodes;
@@ -200,7 +134,7 @@ bool find_longest_common_sequence(
 
     /** COMPUTATION **/
     //We try to found the longest subsequence of zeros for each offset
-    const std::size_t gliding_length = 2*seq1_size;
+    const std::size_t gliding_length = seq1_size+seq2_size;
 
     std::vector<std::size_t> max_zeros, max_zeros_ind1, max_zeros_ind2;
     max_zeros.reserve(gliding_length-1);
@@ -242,7 +176,7 @@ bool find_longest_common_sequence(
         }
 
         //Smoothing the result to cancel noise
-//        utils::denoise(&mean_diffs,10,0);
+        utils::denoise(&mean_diffs,3,0);
 
         //Find the longest zeros sequence
         std::size_t zero_seq = 0, max_zero_seq = 0;
@@ -290,7 +224,6 @@ bool find_longest_common_sequence(
 
     file_zeros.close();
 
-
     //We try to found wich sequence of zeros was the longest
     for(std::size_t i=0; i<gliding_length-1; i++)
     {
@@ -331,6 +264,7 @@ bool search_for_subsequence(
     const std::vector< cv::Mat >& subsequence,
     const std::vector< cv::Mat >& sequence,
     const float tolerance,
+    float* ressemblance,
     std::size_t* start,
     std::size_t* length)
 {
@@ -358,7 +292,7 @@ bool search_for_subsequence(
         std::size_t count = 0;
         for(std::size_t j=sub_size-1; j>0; j--)
         {
-            if(utils::more_less(means[i+j],means_sub[j],1))
+            if(utils::more_less(means[i+j],means_sub[j],2))
                 count++;
         }
 
@@ -369,11 +303,11 @@ bool search_for_subsequence(
         }
     }
 
-    std::cout << ind << ' ' << max << std::endl;
-
     const std::size_t minimum_length = static_cast<std::size_t>(
                                            static_cast<float>(sub_size)*tolerance);
 
+    if(ressemblance != nullptr)
+        *ressemblance = (1.0f/static_cast<float>(sub_size))*max;
     if(start != nullptr)
         *start = ind;
     if(length != nullptr)
