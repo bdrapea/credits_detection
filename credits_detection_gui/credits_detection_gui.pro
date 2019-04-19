@@ -1,6 +1,11 @@
 QT += widgets \
     charts
 
+LIBS += -lboost_system -lboost_filesystem
+INCLUDEPATH += /usr/inlude/boost
+
+CONFIG += console
+
 SOURCES += \
     src/main.cpp \
     src/crde_main_window.cpp \

@@ -6,6 +6,7 @@
 #include <QLabel>
 #include <QGroupBox>
 #include <QtCharts>
+#include <QProgressBar>
 
 using namespace QtCharts;
 
@@ -22,12 +23,15 @@ private:
     QSlider* m_timeline;
     QChartView* m_chart_view;
     QChart* m_chart;
+    QProgressBar* m_progress;
 
 public:
     credits_timeline(const QString& title ,QWidget* parent = nullptr);
 
     void init_widgets();
     void organize_widgets();
+
+    friend class main_window;
 };
 }
 }

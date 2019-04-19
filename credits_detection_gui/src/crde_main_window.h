@@ -1,5 +1,11 @@
 #pragma once
 
+#include <sstream>
+#include <string>
+#include <algorithm>
+
+#include <boost/filesystem.hpp>
+
 #include <QApplication>
 #include <QMainWindow>
 #include <QPushButton>
@@ -8,6 +14,7 @@
 #include <QTextEdit>
 #include <QGroupBox>
 #include <QFileDialog>
+#include <QProcess>
 
 #include "crde_credits_view.h"
 
@@ -20,6 +27,11 @@ class main_window : public QMainWindow
     Q_OBJECT
 
 private:
+    std::vector<std::string> m_video_names;
+    boost::filesystem::path m_exec_path;
+    QProcess* m_core_process;
+    std::size_t m_video_count = 0;
+    int m_biff_count = 0;
     QGridLayout* m_main_window_layout;
     /**< Folder selection **/
     QPushButton* m_folder_selection_button;
@@ -27,13 +39,19 @@ private:
     /**< Credits show **/
     credits_view* m_cred_view;
     /**< Console output **/
-    QTextEdit* m_console_outputs;
+    QLineEdit* m_console_outputs;
+
 public:
-    main_window();
+    main_window(const boost::filesystem::path& exec_path);
 
     void init_widget();
     void organize_widget();
     void connect_widgets();
+    std::string arguments_from_folder(
+            const boost::filesystem::path& folder_path);
+
+public slots:
+    void start_detection(const boost::filesystem::path& path);
 };
 }
 }

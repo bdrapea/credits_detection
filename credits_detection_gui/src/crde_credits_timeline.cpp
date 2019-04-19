@@ -21,6 +21,7 @@ void credits_timeline::init_widgets()
     m_timeline = new QSlider(Qt::Horizontal,this);
     m_chart_view = new QChartView(this);
     m_chart = new QChart;
+    m_progress = new QProgressBar(this);
 }
 
 void credits_timeline::organize_widgets()
@@ -28,6 +29,7 @@ void credits_timeline::organize_widgets()
     const int widget_width = 10;
     m_main_layout->addWidget(m_timeline,0,0,1,widget_width);
     m_main_layout->addWidget(m_chart_view,1,0);
+    m_main_layout->addWidget(m_progress,2,0);
 }
 }
 }
