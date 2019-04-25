@@ -25,17 +25,30 @@ void credits_timeline::init_widgets()
     m_series = new QLineSeries(this);
     m_cursor = new QLineSeries(this);
         m_cursor->setPen(QPen(Qt::black));
+
     m_credits_start = new QLineSeries(this);
     m_credits_end = new QLineSeries(this);
-        m_credits_start->setPen(QPen(Qt::green,1));
-        m_credits_end->setPen(QPen(Qt::red,1));
+    QPen start_pen = QPen(Qt::green,1);
+    QPen end_pen = QPen(Qt::red,1);
+        m_credits_start->setPen(start_pen);
 
-    m_infos = new QLabel("processing",this);
+        m_credits_end->setPen(end_pen);
+        m_credits_start->setName("searching start tc");
+        m_credits_end->setName("searching end tc");
 
     m_chart->addSeries(m_series);
     m_chart->addSeries(m_cursor);
     m_chart->addSeries(m_credits_start);
     m_chart->addSeries(m_credits_end);
+
+    QFont marker_font = QFont("Arial");
+    marker_font.setBold(true);
+
+    for(QLegendMarker* marker : m_chart->legend()->markers())
+    {
+        marker->setVisible(false);
+        marker->setFont(marker_font);
+    }
 
     m_chart->createDefaultAxes();
     m_chart_view = new QChartView(m_chart);
@@ -49,12 +62,6 @@ void credits_timeline::organize_widgets()
     m_main_layout->addWidget(m_timeline,0,0,1,widget_width);
     m_main_layout->addWidget(m_chart_view,1,0);
     m_main_layout->addWidget(m_progress,2,0);
-    m_main_layout->addWidget(m_infos,3,0);
-}
-
-void credits_timeline::print_timecodes(const std::string& tc1,
-                                       const std::string& tc2)
-{
 }
 
 }

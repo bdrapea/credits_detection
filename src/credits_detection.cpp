@@ -78,7 +78,7 @@ utils::credits_tc find_credits_timecodes(
                         com_seq, sequences[i], 0.90f,&ress,&star,&siz,
                         video_names[i]);
 
-            std::cout << std::setprecision(2) << i << ' '
+            std::cout << "RESSEMBLANCE:" << std::setprecision(2) << i << ' '
                       << ress << ' ' << star
                       << ' ' << siz << std::endl;
 
@@ -310,7 +310,7 @@ bool search_for_subsequence(
 
     graph_data_file.close();
 
-    std::cout << "GRAPH" << std::endl;
+    std::cout << "GRAPH GENERATED";
 
     const std::size_t minimum_length = static_cast<std::size_t>(
                                         static_cast<float>(sub_size)*tolerance);

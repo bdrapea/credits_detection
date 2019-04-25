@@ -4,7 +4,8 @@ QT += widgets \
 LIBS += -lboost_system -lboost_filesystem
 INCLUDEPATH += /usr/inlude/boost
 
-CONFIG += console
+CONFIG += console \
+    c++11
 
 SOURCES += \
     src/main.cpp \

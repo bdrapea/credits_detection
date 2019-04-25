@@ -37,8 +37,6 @@ public:
 
     void init_widgets();
     void organize_widgets();
-    void print_timecodes(const std::string& tc1, const std::string& tc2);
-
     friend class main_window;
     friend class credits_view;
 };

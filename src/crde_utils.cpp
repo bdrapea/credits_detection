@@ -6,7 +6,6 @@ namespace  utils
 {
 std::string frame_to_time(std::size_t frames, const float fps)
 {
-    std::size_t tmp_frames = frames;
     std::size_t nb_frames = frames % static_cast<std::size_t>(fps);
     frames /= static_cast<std::size_t>(fps);
     std::size_t nb_seconds = frames % 60;

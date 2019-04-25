@@ -83,7 +83,6 @@ void credits_view::load_pixmaps(const boost::filesystem::path &folder_path,
 
     for(std::size_t i=0; i<pix_count; i+=inter)
     {
-        std::cout << paths[i] << std::endl;
         pixs.emplace_back(paths[i].c_str());
     }
     m_thumbnail_pixmaps.emplace_back(pixs);
@@ -131,6 +130,7 @@ void credits_view::load_graphs()
         unlink(graphs[i].c_str());
     }
 }
+
 
 }
 }
