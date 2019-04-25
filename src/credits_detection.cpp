@@ -75,7 +75,8 @@ utils::credits_tc find_credits_timecodes(
         for(std::size_t i=0; i<path_count; i++)
         {
             bool found = search_for_subsequence(
-                        com_seq, sequences[i], 0.98f,&ress,&star,&siz);
+                        com_seq, sequences[i], 0.90f,&ress,&star,&siz,
+                        video_names[i]);
 
             std::cout << std::setprecision(2) << i << ' '
                       << ress << ' ' << star
@@ -144,7 +145,6 @@ bool find_longest_common_sequence(
     std::vector< std::vector<int> > result_seqs;
     result_seqs.reserve(gliding_length-1);
 
-    std::ofstream file_zeros("/home/bdrapeaud/Bureau/zero.txt");
     for(std::size_t o=1; o<gliding_length; o++)
     {
         /** Size of the sequence to analyse **/
@@ -176,7 +176,7 @@ bool find_longest_common_sequence(
         }
 
         //Smoothing the result to cancel noise
-        utils::denoise(&mean_diffs,3,0);
+        utils::denoise(&mean_diffs,30,0);
 
         //Find the longest zeros sequence
         std::size_t zero_seq = 0, max_zero_seq = 0;
@@ -206,9 +206,6 @@ bool find_longest_common_sequence(
             }
         }
 
-        //Adding longest zero sequence to log file
-        file_zeros << max_zero_seq << std::endl;
-
         //Add result to main vectors
         max_zeros.push_back(max_zero_seq);
         max_zeros_ind1.push_back(zeros_ind1);
@@ -221,8 +218,6 @@ bool find_longest_common_sequence(
                   *static_cast<float>(o) <<'%'<< "\e[A" << std::endl;
     }
     std::cout << std::endl;
-
-    file_zeros.close();
 
     //We try to found wich sequence of zeros was the longest
     for(std::size_t i=0; i<gliding_length-1; i++)
@@ -246,14 +241,8 @@ bool find_longest_common_sequence(
         }
     }
 
-    //We write the successful sequence to a file*
     if(*sequence1_begin != std::size_t(-1))
     {
-        std::ofstream file("/home/bdrapeaud/Bureau/test.txt");
-        for(int u : result_seqs[*sequence1_begin])
-            file << u << std::endl;
-        file.close();
-
         return true;
     }
 
@@ -266,8 +255,10 @@ bool search_for_subsequence(
     const float tolerance,
     float* ressemblance,
     std::size_t* start,
-    std::size_t* length)
+    std::size_t* length,
+    const std::string& video_name)
 {
+
     std::size_t sub_size = subsequence.size();
     std::size_t seq_size = sequence.size();
 
@@ -292,7 +283,7 @@ bool search_for_subsequence(
         std::size_t count = 0;
         for(std::size_t j=sub_size-1; j>0; j--)
         {
-            if(utils::more_less(means[i+j],means_sub[j],2))
+            if(utils::more_less(means[i+j],means_sub[j],3))
                 count++;
         }
 
@@ -303,8 +294,26 @@ bool search_for_subsequence(
         }
     }
 
+    boost::filesystem::path graph_data_path =
+            boost::filesystem::path(__FILE__).parent_path().parent_path();
+    graph_data_path /= "graphs";
+    graph_data_path /= video_name;
+    std::ofstream graph_data_file(graph_data_path.c_str());
+
+    for(std::size_t i=0; i<seq_size; i++)
+    {
+        if(i >= ind && i < max+ind)
+            graph_data_file << means[i]-means_sub[i-ind] << '\n';
+        else
+            graph_data_file << means[i] << '\n';
+    }
+
+    graph_data_file.close();
+
+    std::cout << "GRAPH" << std::endl;
+
     const std::size_t minimum_length = static_cast<std::size_t>(
-                                           static_cast<float>(sub_size)*tolerance);
+                                        static_cast<float>(sub_size)*tolerance);
 
     if(ressemblance != nullptr)
         *ressemblance = (1.0f/static_cast<float>(sub_size))*max;

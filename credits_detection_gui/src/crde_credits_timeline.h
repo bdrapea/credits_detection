@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #include <QWidget>
 #include <QGridLayout>
 #include <QSlider>
@@ -24,14 +26,21 @@ private:
     QChartView* m_chart_view;
     QChart* m_chart;
     QProgressBar* m_progress;
+    QLineSeries* m_series;
+    QLineSeries* m_cursor;
+    QLineSeries* m_credits_start;
+    QLineSeries* m_credits_end;
+    QLabel* m_infos;
 
 public:
     credits_timeline(const QString& title ,QWidget* parent = nullptr);
 
     void init_widgets();
     void organize_widgets();
+    void print_timecodes(const std::string& tc1, const std::string& tc2);
 
     friend class main_window;
+    friend class credits_view;
 };
 }
 }

@@ -15,4 +15,5 @@ SOURCES += \
 HEADERS += \
     src/crde_main_window.h \
     src/crde_credits_view.h \
-    src/crde_credits_timeline.h
+    src/crde_credits_timeline.h \
+

@@ -49,15 +49,17 @@ std::ostream& operator<<(std::ostream& os,
     {
         os << std::setw(6)
            << "Video: " << timecodes.video_names[i] << '\n'
+           << "Times:    "
            << frame_to_time(timecodes.starts[i],25.0f)
            << " --> "
-           << frame_to_time(timecodes.ends[i],25.0f)
-           << " = "
-           << frame_to_time(timecodes.ends[i]-timecodes.starts[i],25.0f)
-           << '\n'
+           << frame_to_time(timecodes.ends[i],25.0f) << '\n'
+           << "Frames:   "
            << timecodes.starts[i]
            << " --> "
-           << timecodes.ends[i]
+           << timecodes.ends[i] << '\n'
+           << "Duration: "
+           << frame_to_time(timecodes.ends[i]-timecodes.starts[i],25.0f)
+           << '\n'
            << "\n\n";
 
     }

@@ -15,6 +15,7 @@
 #include <QGroupBox>
 #include <QFileDialog>
 #include <QProcess>
+#include <QMessageBox>
 
 #include "crde_credits_view.h"
 
@@ -49,6 +50,8 @@ public:
     void connect_widgets();
     std::string arguments_from_folder(
             const boost::filesystem::path& folder_path);
+
+    QString frame_to_time(const std::size_t frame, const float fps);
 
 public slots:
     void start_detection(const boost::filesystem::path& path);
