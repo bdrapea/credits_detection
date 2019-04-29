@@ -94,8 +94,6 @@ void main_window::start_detection(const boost::filesystem::path &path)
             [this]()
     {
         QString str(m_core_process->readAll());
-        m_console_outputs->setText(str);
-
         std::string std_str = str.toStdString();
 
         static std::size_t episod_ind = 0;
@@ -103,41 +101,60 @@ void main_window::start_detection(const boost::filesystem::path &path)
         const char* exten_name = ".jpg";
         const std::size_t zero_count = 8;
 
-        if(std_str.find("LOADING") != std::string::npos)
+        std::istringstream lines(std_str);
+        std::string line;
+        while(getline(lines,line))
         {
-            std::size_t exten_pos = std_str.find(exten_name);
-            const int progress_value =
-                    static_cast<int>(
-                    scale * std::stof(std_str.substr(exten_pos-zero_count)));
-
-            if(progress_value < m_cred_view->m_credits_timelines[episod_ind]->
-                m_progress->value())
+            std::cout << line << std::endl;
+            m_console_outputs->setText(line.c_str());
+            if(line.find("LOADING") != std::string::npos)
             {
-                m_cred_view->m_credits_timelines[episod_ind]->
-                                m_progress->setValue(100);
-                episod_ind++;
+                std::size_t exten_pos = line.find(exten_name);
+                const int progress_value =
+                        static_cast<int>(
+                        scale * std::stof(line.substr(exten_pos-zero_count)));
+
+                if(progress_value < m_cred_view->m_credits_timelines[episod_ind]->
+                    m_progress->value())
+                {
+                    m_cred_view->m_credits_timelines[episod_ind]->
+                                    m_progress->setValue(100);
+                    episod_ind++;
+                }
+
+                m_cred_view->m_credits_timelines[episod_ind]->m_progress->
+                        setValue(progress_value);
             }
 
-            m_cred_view->m_credits_timelines[episod_ind]->m_progress->
-                    setValue(progress_value);
-        }
-        if(std_str.find("GRAPH") != std::string::npos)
-        {
-
-            boost::filesystem::path graph_folder =
-                    boost::filesystem::path(__FILE__)
-                    .parent_path().parent_path().parent_path();
-            graph_folder /= "graphs";
-
-            std::vector< boost::filesystem::path > graph_paths;
-            std::copy(boost::filesystem::directory_iterator(graph_folder),
-                      boost::filesystem::directory_iterator(),
-                      std::back_inserter(graph_paths));
-            std::sort(graph_paths.begin(), graph_paths.end());
-
-            std::size_t graph_path_count = graph_paths.size();
-            for(std::size_t i=0; i<graph_path_count; i++)
+            else if(line.find("GRAPH") != std::string::npos)
             {
+                boost::filesystem::path graph_folder =
+                        boost::filesystem::path(__FILE__)
+                        .parent_path().parent_path().parent_path();
+                graph_folder /= "graphs";
+
+                std::vector< boost::filesystem::path > graph_paths;
+                std::copy(boost::filesystem::directory_iterator(graph_folder),
+                          boost::filesystem::directory_iterator(),
+                          std::back_inserter(graph_paths));
+                std::sort(graph_paths.begin(), graph_paths.end());
+
+                std::size_t ind = 0;
+                ind = line.find(".",ind);
+                double ressemblance =
+                        QString(line.substr(ind-1,4).c_str()).toDouble()
+                        * 100.0;
+
+                std::size_t i=0;
+                if(line[ind-4] >= '0' && line[ind-4] <= '9')
+                    i = std::stoul(line.substr(ind-4,2));
+                else
+                    i = std::stoul(line.substr(ind-3,2));std::size_t i = std::stoul(line.substr(ind-4,2));
+
+                m_cred_view->m_credits_timelines[i]->m_chart->setTitle(
+                            "Ressemblance = " + QString::number(ressemblance)
+                            + "%");
+
                 std::ifstream ifile(
                             graph_paths[i].c_str(),
                             std::ios::in);
@@ -154,7 +171,7 @@ void main_window::start_detection(const boost::filesystem::path &path)
                     if(off%pas==0)
                     {
                         ifile >> tmp;
-                        points.push_back(QPointF(off,tmp));
+                        points.push_back(QPointF(off,std::abs(tmp)));
 
                     if(tmp > max_y)
                         max_y =tmp;
@@ -178,82 +195,69 @@ void main_window::start_detection(const boost::filesystem::path &path)
 
                 ifile.close();
             }
-        }
-        if(std::size_t ind = std_str.find("RESSEMBLANCE:") != std::string::npos)
-        {
-            while(std_str[ind] != ':')ind++;
-            std::string num;
-            while(std_str[ind] != ' ')
+            else if(line.find("Frames") != std::string::npos)
             {
-                num.push_back(std_str[ind]);
-            }
+                std::cout << "TIME \n" << std_str << std::endl;
+                const char* keyword = "Frames:";
+                const std::size_t key_size = std::strlen(keyword);
+                std::size_t ind = 0;
+                std::size_t episode = 0;
 
-            std::cout << "num="<< num << std::endl;
-        }
-        if(std_str.find("TIMECODES") != std::string::npos)
-        {
-            const char* keyword = "Frames:";
-            const std::size_t key_size = std::strlen(keyword);
-            std::size_t ind = 0;
-            std::size_t episode = 0;
-
-            //Extract frame
-            while((ind = std_str.find(keyword,ind+1)) !=  std::string::npos)
-            {
-                ind += key_size;
-                while(std_str[ind] == ' ')
+                //Extract frame
+                while((ind = std_str.find(keyword,ind+1)) !=  std::string::npos)
                 {
-                    ind++;
+                    ind += key_size;
+                    while(std_str[ind] == ' ')
+                    {
+                        ind++;
+                    }
+                    std::string start,end;
+                    while(std_str[ind] != '-')
+                    {
+                        start.push_back(std_str[ind]);
+                        ind++;
+                    }
+                    while(std_str[ind] < '0' || std_str[ind] > '9')ind++;
+                    while(std_str[ind] != '\n')
+                    {
+                        end.push_back(std_str[ind]);
+                        ind++;
+                    }
+
+                    qreal start_ind = std::stoi(start);
+                    qreal end_ind = std::stoi(end);
+
+                    QList<QPointF> credits_starts =
+                    {
+                        {start_ind,0},{start_ind,256}
+                    };
+                    QList<QPointF> credits_ends =
+                    {
+                        {end_ind,0},{end_ind,256}
+                    };
+
+                    m_cred_view->m_credits_timelines[episode]->
+                            m_chart->legend()->markers()[2]->setVisible(true);
+                    m_cred_view->m_credits_timelines[episode]->
+                            m_chart->legend()->markers()[3]->setVisible(true);
+
+                    m_cred_view->m_credits_timelines[episode]->
+                            m_credits_start->append(credits_starts);
+                    m_cred_view->m_credits_timelines[episode]->
+                            m_credits_end->append(credits_ends);
+
+                    m_cred_view->m_credits_timelines[episode]->
+                            m_credits_start->setName(
+                                frame_to_time(
+                                static_cast<std::size_t>(start_ind),25.0)
+                                + " = " + QString::number(start_ind));
+                    m_cred_view->m_credits_timelines[episode]->
+                            m_credits_end->setName(
+                                frame_to_time(static_cast<std::size_t>(end_ind),
+                                              25.0)
+                                + " = " + QString::number(end_ind));
+                    episode ++;
                 }
-                std::string start,end;
-                while(std_str[ind] != '-')
-                {
-                    start.push_back(std_str[ind]);
-                    ind++;
-                }
-                while(std_str[ind] < '0' || std_str[ind] > '9')ind++;
-                while(std_str[ind] != '\n')
-                {
-                    end.push_back(std_str[ind]);
-                    ind++;
-                }
-
-                qreal start_ind = std::stoi(start);
-                qreal end_ind = std::stoi(end);
-
-                QList<QPointF> credits_starts =
-                {
-                    {start_ind,0},{start_ind,256}
-                };
-                QList<QPointF> credits_ends =
-                {
-                    {end_ind,0},{end_ind,256}
-                };
-
-                m_cred_view->m_credits_timelines[episode]->
-                        m_chart->legend()->markers()[2]->setVisible(true);
-                m_cred_view->m_credits_timelines[episode]->
-                        m_chart->legend()->markers()[3]->setVisible(true);
-
-                m_cred_view->m_credits_timelines[episode]->
-                        m_credits_start->append(credits_starts);
-                m_cred_view->m_credits_timelines[episode]->
-                        m_credits_end->append(credits_ends);
-
-                m_cred_view->m_credits_timelines[episode]->
-                        m_credits_start->setName(
-                            frame_to_time(
-                            static_cast<std::size_t>(start_ind),25.0)
-                            + " = " + QString::number(start_ind));
-                m_cred_view->m_credits_timelines[episode]->
-                        m_credits_end->setName(
-                            frame_to_time(static_cast<std::size_t>(end_ind),
-                                          25.0)
-                            + " = " + QString::number(end_ind));
-
-                m_cred_view->m_credits_timelines[episode]->
-                        m_chart->setTitle("Ressemblance = ");
-                episode ++;
             }
         }
     });

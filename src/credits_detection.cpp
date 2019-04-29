@@ -78,7 +78,7 @@ utils::credits_tc find_credits_timecodes(
                         com_seq, sequences[i], 0.90f,&ress,&star,&siz,
                         video_names[i]);
 
-            std::cout << "RESSEMBLANCE:" << std::setprecision(2) << i << ' '
+            std::cout << " RESSEMBLANCE:" << std::setprecision(2) << i << ' '
                       << ress << ' ' << star
                       << ' ' << siz << std::endl;
 

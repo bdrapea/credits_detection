@@ -28,7 +28,7 @@ void credits_timeline::init_widgets()
 
     m_credits_start = new QLineSeries(this);
     m_credits_end = new QLineSeries(this);
-    QPen start_pen = QPen(Qt::green,1);
+    QPen start_pen = QPen(Qt::red,1);
     QPen end_pen = QPen(Qt::red,1);
         m_credits_start->setPen(start_pen);
 

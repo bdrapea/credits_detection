@@ -8,6 +8,9 @@ int main(int argc, char** argv)
         return -1;
     }
 
+    //Deleting files in graphs
+    system("rm -r ../graphs/*");
+
     QApplication app(argc, argv);
     crde::gui::main_window mainwin(argv[1]);
     mainwin.showMaximized();
