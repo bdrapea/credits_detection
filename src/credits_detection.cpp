@@ -60,11 +60,11 @@ utils::credits_tc find_credits_timecodes(
         std::size_t comseq2_start = 0;
         std::size_t comseq_size = 0;
         find_longest_common_sequence(
-                    ref_1,ref_2,&comseq1_start, &comseq2_start, &comseq_size);
+            ref_1,ref_2,&comseq1_start, &comseq2_start, &comseq_size);
 
         // We extract the common sequence
         std::vector< cv::Mat > com_seq =
-                utils::sub_vector(ref_1,comseq1_start,comseq_size);
+            utils::sub_vector(ref_1,comseq1_start,comseq_size);
 
         // Then for we check the ressemblance with this common sequence and all
         // episode
@@ -75,8 +75,8 @@ utils::credits_tc find_credits_timecodes(
         for(std::size_t i=0; i<path_count; i++)
         {
             bool found = search_for_subsequence(
-                        com_seq, sequences[i], 0.90f,&ress,&star,&siz,
-                        video_names[i]);
+                             com_seq, sequences[i], 0.90f,&ress,&star,&siz,
+                             video_names[i]);
 
             std::cout << " RESSEMBLANCE:" << std::setprecision(2) << i << ' '
                       << ress << ' ' << star
@@ -295,7 +295,7 @@ bool search_for_subsequence(
     }
 
     boost::filesystem::path graph_data_path =
-            boost::filesystem::path(__FILE__).parent_path().parent_path();
+        boost::filesystem::path(__FILE__).parent_path().parent_path();
     graph_data_path /= "graphs";
     graph_data_path /= video_name;
     std::ofstream graph_data_file(graph_data_path.c_str());
@@ -313,7 +313,7 @@ bool search_for_subsequence(
     std::cout << "GRAPH GENERATED";
 
     const std::size_t minimum_length = static_cast<std::size_t>(
-                                        static_cast<float>(sub_size)*tolerance);
+                                           static_cast<float>(sub_size)*tolerance);
 
     if(ressemblance != nullptr)
         *ressemblance = (1.0f/static_cast<float>(sub_size))*max;

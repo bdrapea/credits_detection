@@ -50,7 +50,7 @@ public:
     void organize_widget();
     void connect_widgets();
     std::string arguments_from_folder(
-            const boost::filesystem::path& folder_path);
+        const boost::filesystem::path& folder_path);
 
     QString frame_to_time(const std::size_t frame, const float fps);
 

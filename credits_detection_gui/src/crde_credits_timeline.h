@@ -33,7 +33,7 @@ private:
     QLabel* m_infos;
 
 public:
-    credits_timeline(const QString& title ,QWidget* parent = nullptr);
+    credits_timeline(const QString& title,QWidget* parent = nullptr);
 
     void init_widgets();
     void organize_widgets();

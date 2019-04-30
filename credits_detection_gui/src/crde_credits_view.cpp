@@ -20,7 +20,7 @@ void credits_view::init_widgets()
 }
 
 void credits_view::init_scene(
-        const std::size_t nb_timelines, const std::vector<std::string>& names)
+    const std::size_t nb_timelines, const std::vector<std::string>& names)
 {
     m_credits_timelines.reserve(nb_timelines);
     m_thumbnail = new QGraphicsPixmapItem(QPixmap(100,90));
@@ -31,7 +31,7 @@ void credits_view::init_scene(
     for(std::size_t i=0; i<nb_timelines; i++)
     {
         m_credits_timelines.push_back(
-                    new credits_timeline(names[i].c_str()));
+            new credits_timeline(names[i].c_str()));
         int cred_y = m_credits_timelines[0]->height()*static_cast<int>(i);
         m_scene->addWidget(m_credits_timelines[i])->setY(cred_y);
         m_credits_timelines[i]->m_timeline->setMaximum(NB_BIFF_SLIDER-1);
@@ -76,7 +76,7 @@ void credits_view::load_pixmaps(const boost::filesystem::path &folder_path,
     std::sort(paths.begin(), paths.end());
 
     std::size_t inter = static_cast<std::size_t>(static_cast<float>(pix_count)/
-            static_cast<float>(NB_BIFF_SLIDER));
+                        static_cast<float>(NB_BIFF_SLIDER));
     std::vector<QPixmap> pixs;
     pixs.reserve(NB_BIFF_SLIDER);
 
@@ -88,22 +88,22 @@ void credits_view::load_pixmaps(const boost::filesystem::path &folder_path,
 }
 
 void credits_view::show_thumbnail(
-        const std::size_t episode, const std::size_t frame)
+    const std::size_t episode, const std::size_t frame)
 {
     m_thumbnail->setPixmap(m_thumbnail_pixmaps[episode][frame]);
     m_thumbnail->setY(static_cast<qreal>(m_credits_timelines[0]->height())
-            *episode);
+                      *episode);
     m_thumbnail->setX(
         static_cast<qreal>(
             m_credits_timelines[0]->m_timeline->width()/NB_BIFF_SLIDER)*frame
-            + m_credits_timelines[0]->m_timeline->x());
+        + m_credits_timelines[0]->m_timeline->x());
 }
 
 void credits_view::load_graphs()
 {
     boost::filesystem::path graph_paths =
-            boost::filesystem::path(__FILE__).parent_path().
-            parent_path().parent_path();
+        boost::filesystem::path(__FILE__).parent_path().
+        parent_path().parent_path();
     graph_paths /= "graphs";
 
     std::vector< boost::filesystem::path > graphs;
