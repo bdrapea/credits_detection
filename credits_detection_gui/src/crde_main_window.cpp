@@ -1,4 +1,5 @@
 #include "crde_main_window.h"
+#include "crde_qt_utils.h"
 
 namespace crde
 {
@@ -8,6 +9,7 @@ main_window::main_window(const boost::filesystem::path& exec_path)
     : QMainWindow(nullptr),
       m_exec_path(exec_path)
 {
+    std::cout << utils::load_stylesheet(utils::path_to_sheets("timeline")).c_str() << std::endl;
     init_widget();
     organize_widget();
     connect_widgets();

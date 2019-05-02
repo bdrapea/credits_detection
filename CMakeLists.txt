@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(credits_detection)
+project(credits_detection LANGUAGES CXX)
 
 #set the c++ version to c++14
 set(CMAKE_CXX_STANDARD 14)
@@ -18,10 +18,16 @@ set(SRCS "src/main.cpp"
 set(HDRS "src/credits_detection.h"
          "src/crde_exception.h"
          "src/crde_utils.h")
+set(CMAKE_CXX_FLAGS "-Ofast")
+
+#prepare extern libs
+set(INCLUDE_DIRS ${OpenCV_INCLUDE_DIRS}
+                 ${Boost_INCLUDE_DIRS})
+set(LIBS ${OpenCV_LIBS}
+         ${Boost_LIBS} -lboost_system -lboost_filesystem
+         -pthread)
 
 #Set the final executable
-include_directories(${OpenCV_INCLUDE_DIRS}
-                    ${Boost_INCLUDE_DIRS})
+include_directories(${INCLUDE_DIRS})
 add_executable(${PROJECT_NAME} ${SRCS} ${HDRS})
-target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS}
-                                      ${Boost_LIBS} -lboost_system -lboost_filesystem)
+target_link_libraries(${PROJECT_NAME} ${LIBS})

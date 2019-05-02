@@ -142,7 +142,7 @@ bool find_longest_common_sequence(
     max_zeros_ind1.reserve(gliding_length-1);
     max_zeros_ind2.reserve(gliding_length-1);
 
-    std::vector< std::vector<int> > result_seqs;
+    std::vector< std::vector<uint8_t> > result_seqs;
     result_seqs.reserve(gliding_length-1);
 
     for(std::size_t o=1; o<gliding_length; o++)
@@ -150,7 +150,7 @@ bool find_longest_common_sequence(
         /** Size of the sequence to analyse **/
         std::size_t analyse_length;
         /** Vector of difference of the sequence means **/
-        std::vector<int> mean_diffs;
+        std::vector<uint8_t> mean_diffs;
 
         if(o < seq1_size)
         {
@@ -158,8 +158,7 @@ bool find_longest_common_sequence(
             mean_diffs.assign(analyse_length,0);
             for(std::size_t i=0; i<analyse_length; i++)
             {
-                mean_diffs[i]=
-                    static_cast<int>(
+                mean_diffs[i] = static_cast<uint8_t>(
                         std::abs(means1[i]-means2[seq1_size-analyse_length+i]));
             }
         }
@@ -169,14 +168,13 @@ bool find_longest_common_sequence(
             mean_diffs.assign(analyse_length,0);
             for(std::size_t i=0; i<analyse_length; i++)
             {
-                mean_diffs[i]=
-                    static_cast<int>(
+                mean_diffs[i] = static_cast<uint8_t>(
                         std::abs(means1[seq1_size-analyse_length+i]-means2[i]));
             }
         }
 
         //Smoothing the result to cancel noise
-        utils::denoise(&mean_diffs,30,0);
+        utils::denoise(&mean_diffs,uint8_t(30),uint8_t(0));
 
         //Find the longest zeros sequence
         std::size_t zero_seq = 0, max_zero_seq = 0;
@@ -184,7 +182,7 @@ bool find_longest_common_sequence(
 
         for(std::size_t i=0; i<analyse_length; i++)
         {
-            if(utils::more_less(mean_diffs[i],0,0))
+            if(utils::more_less(mean_diffs[i],uint8_t(0),uint8_t(0)))
                 zero_seq++;
             else
             {
@@ -262,7 +260,7 @@ bool search_for_subsequence(
     std::size_t sub_size = subsequence.size();
     std::size_t seq_size = sequence.size();
 
-    //Compute mean of picel for each sequence
+    //Compute mean of pixel for each sequence
     std::vector<int> means_sub, means;
     means_sub.reserve(sub_size);
     means.reserve(seq_size);

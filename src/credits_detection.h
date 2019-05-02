@@ -7,6 +7,7 @@
 #include <iterator>
 #include <fstream>
 #include <sstream>
+#include <future>
 
 #include <boost/filesystem.hpp>
 

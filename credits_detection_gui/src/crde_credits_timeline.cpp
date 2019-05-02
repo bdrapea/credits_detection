@@ -19,6 +19,8 @@ void credits_timeline::init_widgets()
 {
     m_main_layout = new QGridLayout(this);
     m_timeline = new QSlider(Qt::Horizontal,this);
+    m_timeline->setStyleSheet(
+                utils::load_stylesheet(utils::path_to_sheets("timeline")).c_str());
     m_progress = new QProgressBar(this);
 
     m_chart = new QChart;

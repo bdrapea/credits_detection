@@ -10,6 +10,8 @@
 #include <QtCharts>
 #include <QProgressBar>
 
+#include "crde_qt_utils.h"
+
 using namespace QtCharts;
 
 namespace crde
