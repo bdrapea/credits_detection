@@ -16,6 +16,9 @@ utils::credits_tc find_credits_timecodes(
     std::vector< std::string > video_names;
     video_names.reserve(path_count);
 
+    std::vector< std::future< std::vector< cv::Mat > > > results;
+    results.reserve(path_count);
+
     for(const boost::filesystem::path& path : biff_folders)
     {
         /** Basic checks **/
@@ -34,10 +37,12 @@ utils::credits_tc find_credits_timecodes(
 
         /** Getting the data **/
         //Load images in vector
-        sequences.emplace_back(load_biff_from_dir(path));
+        results.emplace_back(std::async(std::launch::async ,load_biff_from_dir, path));
         video_names.emplace_back(path.filename().c_str());
     }
 
+    for(std::size_t i=0; i<path_count; ++i)
+       sequences.emplace_back(results[i].get());
 
     /** COMPUTATION **/
     // Initialize return value
@@ -159,7 +164,7 @@ bool find_longest_common_sequence(
             for(std::size_t i=0; i<analyse_length; i++)
             {
                 mean_diffs[i] = static_cast<uint8_t>(
-                        std::abs(means1[i]-means2[seq1_size-analyse_length+i]));
+                        means1[i]-means2[seq1_size-analyse_length+i]);
             }
         }
         else
@@ -169,7 +174,7 @@ bool find_longest_common_sequence(
             for(std::size_t i=0; i<analyse_length; i++)
             {
                 mean_diffs[i] = static_cast<uint8_t>(
-                        std::abs(means1[seq1_size-analyse_length+i]-means2[i]));
+                        means1[seq1_size-analyse_length+i]-means2[i]);
             }
         }
 
