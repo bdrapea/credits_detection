@@ -64,12 +64,11 @@ std::vector< cv::Mat > load_biff_from_dir(
  * False if it doesn't find the sub-vector
  */
 bool search_for_subsequence(const std::vector< cv::Mat >& subsequence,
-                            const std::vector< cv::Mat >& sequence,
-                            const float tolerance = 0.9f,
-                            float* ressemblance = nullptr,
-                            std::size_t* start = nullptr,
-                            std::size_t* length = nullptr,
-                            const std::string& video_name = "");
+                             const std::vector< cv::Mat >& sequence,
+                             const float tolerance = 0.9f,
+                             float* ressemblance = nullptr,
+                             std::size_t* start = nullptr,
+                             std::size_t* length = nullptr);
 
 /**
  * @brief find_longest_common_sequence

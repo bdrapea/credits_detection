@@ -65,7 +65,11 @@ utils::credits_tc find_credits_timecodes(
         std::size_t comseq2_start = 0;
         std::size_t comseq_size = 0;
         find_longest_common_sequence(
-            ref_1,ref_2,&comseq1_start, &comseq2_start, &comseq_size);
+                    ref_1,
+                    ref_2,
+                    &comseq1_start,
+                    &comseq2_start,
+                    &comseq_size);
 
         // We extract the common sequence
         std::vector< cv::Mat > com_seq =
@@ -80,8 +84,12 @@ utils::credits_tc find_credits_timecodes(
         for(std::size_t i=0; i<path_count; i++)
         {
             bool found = search_for_subsequence(
-                             com_seq, sequences[i], 0.90f,&ress,&star,&siz,
-                             video_names[i]);
+                            com_seq,
+                            sequences[i],
+                            0.90f,
+                            &ress,
+                            &star,
+                            &siz);
 
             std::cout << " RESSEMBLANCE:" << std::setprecision(2) << i << ' '
                       << ress << ' ' << star
@@ -122,21 +130,15 @@ bool find_longest_common_sequence(
     means1.reserve(seq1_size);
     means2.reserve(seq2_size);
 
-    std::ofstream file1("/home/vqserver2/Bureau/t1.txt"), file2("/home/vqserver2/Bureau/t2.txt");
     for(const cv::Mat& image : seq1)
     {
         means1.push_back(cv::mean(cv::mean(image))[0]);
-        file1 << cv::mean(cv::mean(image))[0] << '\n';
     }
 
     for(const cv::Mat& image : seq2)
     {
         means2.push_back(cv::mean(cv::mean(image))[0]);
-        file2 <<cv::mean(cv::mean(image))[0] << '\n';
     }
-
-    file1.close();
-    file2.close();
 
     /** COMPUTATION **/
     //We try to found the longest subsequence of zeros for each offset
@@ -179,7 +181,7 @@ bool find_longest_common_sequence(
         }
 
         //Smoothing the result to cancel noise
-        utils::denoise(&mean_diffs,uint8_t(30),uint8_t(0));
+//        utils::denoise(&mean_diffs,uint8_t(10),uint8_t(0));
 
         //Find the longest zeros sequence
         std::size_t zero_seq = 0, max_zero_seq = 0;
@@ -258,77 +260,50 @@ bool search_for_subsequence(
     const float tolerance,
     float* ressemblance,
     std::size_t* start,
-    std::size_t* length,
-    const std::string& video_name)
+    std::size_t* length)
 {
+    size_t seq_size = sequence.size();
+    size_t sub_size = subsequence.size();
 
-    std::size_t sub_size = subsequence.size();
-    std::size_t seq_size = sequence.size();
+    std::vector<uint8_t> seq_means;
+    seq_means.reserve(seq_size);
+    std::vector<uint8_t> sub_means;
+    sub_means.reserve(sub_size);
 
-    //Compute mean of pixel for each sequence
-    std::vector<int> means_sub, means;
-    means_sub.reserve(sub_size);
-    means.reserve(seq_size);
     for(const cv::Mat& image : subsequence)
-        means_sub.push_back(static_cast<int>(
+        sub_means.push_back(static_cast<uint8_t>(
                                 cv::mean(cv::mean(image))[0]));
 
     for(const cv::Mat& image : sequence)
-        means.push_back(static_cast<int>(
+        seq_means.push_back(static_cast<uint8_t>(
                             cv::mean(cv::mean(image))[0]));
 
-    //We try to find the sub sequence in it
-    std::size_t max = 0, ind = 0;
-    std::size_t gliding_length = seq_size - sub_size;
 
-    for(std::size_t i=0; i<gliding_length+1; i++)
+    uint8_t* seq_data = seq_means.data();
+    uint8_t* sub_data = sub_means.data();
+
+    size_t gliding_length = seq_size - sub_size;
+    std::vector<size_t> count_vector;
+    count_vector.reserve(gliding_length);
+
+    for (size_t i = 0; i < gliding_length; i++)
     {
-        std::size_t count = 0;
-        for(std::size_t j=sub_size-1; j>0; j--)
+        size_t count = 0;
+        for (size_t j = 0; j < sub_size; j++)
         {
-            if(utils::more_less(means[i+j],means_sub[j],3))
-                count++;
+            count += (utils::more_less(seq_data[i + j],sub_data[j],uint8_t(1)));
         }
-
-        if(count > max)
-        {
-            max = count;
-            ind = i;
-        }
+        count_vector.push_back(count);
     }
 
-    boost::filesystem::path graph_data_path =
-        boost::filesystem::path(__FILE__).parent_path().parent_path();
-    graph_data_path /= "graphs";
-    graph_data_path /= video_name;
-    std::ofstream graph_data_file(graph_data_path.c_str());
+    auto max_it = std::max_element(count_vector.begin(), count_vector.end());
 
-    for(std::size_t i=0; i<seq_size; i++)
-    {
-        if(i >= ind && i < max+ind)
-            graph_data_file << means[i]-means_sub[i-ind] << '\n';
-        else
-            graph_data_file << means[i] << '\n';
-    }
+    *start = std::distance(count_vector.begin(), max_it);
+    *length = *max_it;
 
-    graph_data_file.close();
+    *ressemblance = (100.0f/sub_size) * (*max_it);
 
-    std::cout << "GRAPH GENERATED";
-
-    const std::size_t minimum_length = static_cast<std::size_t>(
-                                           static_cast<float>(sub_size)*tolerance);
-
-    if(ressemblance != nullptr)
-        *ressemblance = (1.0f/static_cast<float>(sub_size))*max;
-    if(start != nullptr)
-        *start = ind;
-    if(length != nullptr)
-        *length = max;
-
-    if(max >= minimum_length)
-        return true;
-
-    return false;
+    return (*ressemblance >= tolerance);
 }
 
 std::vector< cv::Mat > load_biff_from_dir(
